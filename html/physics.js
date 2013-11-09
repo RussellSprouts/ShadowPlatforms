@@ -227,6 +227,14 @@ function collideSlopedTile(doA){
     return false;
   }
 }
+
+function Line(startX, startY, endX, endY){
+  this.ax = startX
+  this.ay = startY
+  this.bx = endX
+  this.by = endY
+}
+
 function drawSlopedTile(){
   ctx.beginPath();
   ctx.moveTo(this.x, this.y+this.height); 
