@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+	<head>
+	<title>Physics</title>
+	</head>
+	<body id='b'>
+    <p>Your id is: <span class="myid">loading...</span></p>
+    <input class="connect-text" type="text" placeholder="Friend's id..."/>
+    <button class="connect-button">Submit</button>
+		<canvas id='c' height=700 width=1368></canvas>
+    
+    <script src="jquery.js"></script>
+		<script src="keypress.js"></script>
+		<script src="physics.js"></script>
+		
+		<script src="http://cdn.peerjs.com/0.3/peer.min.js"></script>
+		    <script>
+    var peer = new Peer({key: 'g7kehz2ic8up7gb9'});
+    
+    peer.on('open', function(id) {
+      $(function(){
+        $('.myid').html(id);
+        $('.connect-button').on('click',function(){
+          var text = $('.connect-text').val();
+          var conn = peer.connect(text);
+          conn.on('open', function() {
+            // Receive messages
+            conn.on('data', function(data) {
+              console.log('Received', data);
+            });
+
+            // Send messages
+            conn.send('Hello!');
+          });
+        });
+      });
+    });
+    </script>
+	</body>
+</html>

@@ -1,18 +1,18 @@
+"use strict";
 var canvas = document.getElementById('c');
 var ctx = canvas.getContext('2d');
 ctx.fillStyle='rgba(255,0,0,0.4)';
 ctx.strokeStyle='green';
 ctx.lineWidth = 2;
-IS_SERVER = false;
 var width = canvas.width;
 var height = canvas.height;
 var gravity = 10;
 var ballCount = 0;
 var ITERATION_COUNT = 100;
 var player;
-var CONNECTION;
-var GAME_SCORE = 0;
-var PLAYER_SPEED = 7;
+
+
+var PLAYER_SPEED = 10;
 var RADIUS = 4;
 var X = 0;
 var Y = 1;
@@ -23,10 +23,10 @@ var JUMP_GRACE_PERIOD = 5;
 var mouseX = 0;
 var mouseY = 0;
 
-aIsPressed = false;
-sIsPressed = false;
-wIsPressed = false;
-dIsPressed = false;
+var aIsPressed = false;
+var sIsPressed = false;
+var wIsPressed = false;
+var dIsPressed = false;
 
 var mouseD = false;
 
@@ -71,7 +71,7 @@ function acceleration(){
   }
   
   if( wIsPressed && player.onGround > 0 ){
-    y = -50*PLAYER_SPEED;
+    y = -25*PLAYER_SPEED;
     player.onGround = 0;
   }
   return vec(x, y);
@@ -113,8 +113,8 @@ function satisfyConstraints(dynamicObjects, t){
   }
 }
 
-dynamicObjects = [];
-staticObjects = [];
+var dynamicObjects = [];
+var staticObjects = [];
 
 function Line(startX, startY, endX, endY){
   this.ax = startX
@@ -194,14 +194,13 @@ function intersects(a1,a2,b1,b2){
   return true
 }
 
-var anycorner = function(f,origin,size){
+function inBounds(a,b,oP,nP,size){
+  var anycorner = function(f,origin,size){
     return f(origin) ||
     f(plus(origin,size)) ||
     f(plus(origin,onlyX(size))) ||
     f(plus(origin,onlyY(size)));
-}
-
-function inBounds(a,b,oP,nP,size){
+  }
   var traveled = minus(nP,oP);
   var intersectsLine = function(start){
     var end = plus(start,traveled);
@@ -226,34 +225,34 @@ function collideLine(dyn){
     var adjust, pt, oPt;
 		ctx.strokeStyle='black'
     if( lessX(a,b) && greaterEqY(a,b) ){
-      player.color='green';
+      ctx.fillStyle='green';
       adjust = vec(0,.1);
       oPt = oTL;
       pt = TL;
     } else if( lessX(a,b) && lessY(a,b) ){
-      player.color='yellow';
+      ctx.fillStyle='yellow';
       adjust = vec(-dyn.width, .1);
       oPt = oTR;
       pt = TR;
     } else if( greaterX(a,b) && lessY(a,b) ){
-      player.color='blue';
+      ctx.fillStyle='blue';
       adjust = vec(-dyn.width,-dyn.height - .1);
       dyn.onGround = wIsPressed?0:JUMP_GRACE_PERIOD;
       oPt = oBR;
       pt = BR;
     } else if( equalsX(a,b) && lessY(a,b) ){
-      player.color='#00ffff';
+      ctx.fillStyle='#00ffff';
       adjust = vec(-dyn.width, 0);
       oPt = oTR;
       pt = TR;
     } else if( greaterX(a,b) && greaterEqY(a,b) ){
-      player.color='red';
+      ctx.fillStyle='red';
       adjust = vec(0,-dyn.height  - .1);
       dyn.onGround = wIsPressed?0:JUMP_GRACE_PERIOD;
       oPt = oBL;
       pt = BL;
     } else if( equalsX(a,b) && greaterEqY(a,b) ){
-      player.color='brown';
+      ctx.fillStyle='brown';
       adjust = vec(0,0);
       oPt = oTL;
       pt = TL;
@@ -444,10 +443,6 @@ function shorten(l,a){
   return a;
 }
 
-function randomPosition(){
-  return vec(Math.random()*580+20, Math.random()*300+20)
-}
-
 var SURFACE_FRICTION = .08;
 function calculateNew(a,b,oP,nP){
   var newOnAB = plus(a,project(minus(nP,a),minus(b,a)));
@@ -476,10 +471,7 @@ function intersection(ax, ay, bx, by, poldx, poldy, pnewx, pnewy){
 
 
 function drawPlayer(){
-  var temp = ctx.fillStyle
-  ctx.fillStyle = this.color;
   ctx.fillRect(this.x, this.y, this.width, this.height);
-  ctx.fillStyle = temp;
   //ctx.strokeRect(this.ox, this.oy, this.width, this.height);
 }
 
@@ -493,29 +485,6 @@ function Player(){
   this.ox = 100;
 }
 
-function Goal(){
-  this.pos = randomPosition();
-  this.draw = drawGoal;
-  this.collide = collideGoal;
-}
-
-function collideGoal(p){
-  var p1 = vec(p.x,p.y)
-  var p2 = vec(p.x+p.width,p.y+p.height)
-  var this1 = this.pos
-  var thisS = vec(this.pos[0]+20,this.pos[1]+20);
-  if( (this1[0] < p2[0] == thisS[0] > p1[0]) &&
-      (this1[1] < p2[1] == thisS[1] > p1[1])){
-    this.pos = randomPosition();
-    $('.score').html(++GAME_SCORE);
-  }
-}
-
-function drawGoal(){
-  ctx.fillStyle = 'gold';
-  ctx.fillRect(this.pos[0]-10,this.pos[1]-10,20,20)
-}
-
 dynamicObjects[0] = new Player();
 player = dynamicObjects[0];
 
@@ -524,7 +493,7 @@ staticObjects[0] = new Line(10,10,600,10);
 staticObjects[1] = new Line(600,600,10,600);
 staticObjects[2] = new Line(600,10,600,600);
 staticObjects[3] = new Line(10,600,10,10);
-staticObjects[4] = new Goal();
+
 function getPosition(e) {
 
     //this section is from http://www.quirksmode.org/js/events_properties.html
@@ -548,7 +517,7 @@ function getPosition(e) {
 };
 
 var NUMBER_OF_PLATFORMS = 8;
-var NUMBER_OF_WALLS = 5;
+var NUMBER_OF_WALLS = 4;
 var STATIC_OBJECTS_COUNTER = 0;
 function pushStatic(obj){
   if( staticObjects.length < NUMBER_OF_PLATFORMS + NUMBER_OF_WALLS ){
@@ -565,20 +534,13 @@ $(canvas).click(function(event) {
     // jQuery would normalize the event
     var position = getPosition(event);
     //now you can use the x and y positions
-    if( IS_SERVER ){
-
-    } else {
-      send("handleClick("+JSON.stringify(position)+");")
-      handleClick(position);
-    }
-});
-
-function handleClick(position){
+    
     pushStatic(new Line(position.x+20,position.y-20,position.x-20,position.y-20))
     pushStatic(new Line(position.x-20,position.y+20,position.x+20,position.y+20))
     pushStatic(new Line(position.x-20,position.y-20,position.x-20,position.y+20))
     pushStatic(new Line(position.x+20,position.y+20,position.x+20,position.y-20))
-}
+});
+
 
 var lastMouseX = 0, lastMouseY = 0;
 canvas.mouseUp = function(e){
@@ -607,56 +569,5 @@ function callback(t){
   drawDebug();
   oldT = t;
   window.requestAnimationFrame(callback);
-  if( CONNECTION && IS_SERVER ){
-    if( Math.random()<.01 ){
-      send(packData());
-    } else {
-      send(";aIsPressed="+aIsPressed +
-            ";dIsPressed="+dIsPressed +
-            ";aIsPressed="+aIsPressed +
-            ";wIsPressed="+wIsPressed)
-    }
-  }
 }
-
-function packData(){
-  var str = ";aIsPressed="+aIsPressed +
-            ";dIsPressed="+dIsPressed +
-            ";aIsPressed="+aIsPressed +
-            ";wIsPressed="+wIsPressed +
-            ";$('.score').html("+GAME_SCORE +");"+
-            ";player.x = "+player.x +
-            ";player.y = "+player.y +
-            ";player.ox = "+player.ox +
-            ";player.oy = "+player.oy +
-            ";player.onGround = "+player.onGround +
-            ";player.color = '"+player.color + "';";
-  for( var i = 0; i<staticObjects.length; i++){
-    var obj = staticObjects[i]
-    if( staticObjects[i] instanceof Line ){
-      str += ';staticObjects['+i+'].ax='+obj.ax;
-      str += ';staticObjects['+i+'].ay='+obj.ay;
-      str += ';staticObjects['+i+'].bx='+obj.bx;
-      str += ';staticObjects['+i+'].by='+obj.by+';';
-    } else if( staticObjects[i] instanceof Goal){
-      str += ';staticObjects['+i+'].pos[0]=' + obj.pos[0];
-      str += ';staticObjects['+i+'].pos[1]=' + obj.pos[1];
-    }
-  }
-  return 'eval(("'+str.replace('staticObjects','QW')+'").replace("QW","staticObjects"))';
-}
-
-function send(data){
-  CONNECTION.send(data);
-}
-
-function unpackData(str){
-  eval(str); //eval is evil.
-}
-
-function handleData(c, data){
-  unpackData(data);
-  CONNECTION = c;
-}
-
 window.requestAnimationFrame(callback);
