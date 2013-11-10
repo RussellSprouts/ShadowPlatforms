@@ -15,6 +15,7 @@ var X = 0;
 var Y = 1;
 var OLD_X = 2;
 var OLD_Y = 3;
+var JUMP_GRACE_PERIOD = 5;
 
 var mouseX = 0;
 var mouseY = 0;
@@ -252,28 +253,40 @@ function collideLine(dyn){
   var oldTLy = dyn.oy, oldTRy = dyn.oy, oldBLy = dyn.oy+dyn.height, oldBRy = dyn.oy+dyn.height;
   var newTLx = dyn.x, newTRx = dyn.x+dyn.width, newBLx = dyn.x, newBRx = dyn.x+dyn.width;
   var newTLy = dyn.y, newTRy = dyn.y, newBLy = dyn.y+dyn.height, newBRy = dyn.y+dyn.height;
+  var isInBoundingBoxX, isInBoundingBoxY;
   
-  if( crossProduct(ax,ay,bx,by,oldTLx,oldTLy) >= 0 && crossProduct(ax,ay,bx,by,oldTRx,oldTRy) >= 0 &&
-	  crossProduct(ax,ay,bx,by,oldBLx,oldBLy) >= 0 && crossProduct(ax,ay,bx,by,oldBRx,oldBRy) >= 0 &&
-	  (crossProduct(ax,ay,bx,by,newTLx,newTLy) < 0 || crossProduct(ax,ay,bx,by,newTRx,newTRy) < 0 ||
-	   crossProduct(ax,ay,bx,by,newBLx,newBLy) < 0 || crossProduct(ax,ay,bx,by,newBRx,newBRy) < 0) ){
-    if( ax < bx && ay > by ){
-		return [];
-    } else if( ax < bx && ay < by ){
-		return [];
-    } else if( ax > bx && ay < by ){
-		return [];
-    } else if( ax > bx && ay > by ){
-		return [];
-    } else if( ax == bx && ay < by ){
-		return [];
-    } else if( ax == bx && ay > by ){
-		return [];
-    } else if( ay == by && ax < bx ){
-		return [];
-	} else if( ay == by && ax > bx ){
-		return [];
-	}
+  var lowerx = Math.min(ax,bx);
+  var higherx = Math.max(ax,bx);
+  isInBoundingBoxX = (dyn.x >= lowerx && dyn.x <= higherx) || (lowerx >= dyn.x && lowerx <= dyn.x+dyn.width) || (higherx >= dyn.x && higherx <= dyn.x+dyn.width);
+  var lowery = Math.min(ay,by);
+  var highery = Math.min(ay,by);
+  isInBoundingBoxY = (dyn.y >= lowery && dyn.y <= highery) || (lowery >= dyn.y && lowery <= dyn.y+dyn.height) || (highery >= dyn.y && highery <= dyn.y+dyn.height);
+  
+  if( isInBoundingBoxX && isInBoundingBoxY ){
+	  if( crossProduct(ax,ay,bx,by,oldTLx,oldTLy) >= -.1 && crossProduct(ax,ay,bx,by,oldTRx,oldTRy) >= -.1 &&
+		  crossProduct(ax,ay,bx,by,oldBLx,oldBLy) >= -.1 && crossProduct(ax,ay,bx,by,oldBRx,oldBRy) >= -.1 &&
+		  (crossProduct(ax,ay,bx,by,newTLx,newTLy) <= .1 || crossProduct(ax,ay,bx,by,newTRx,newTRy) <= .1 ||
+		   crossProduct(ax,ay,bx,by,newBLx,newBLy) <= .1 || crossProduct(ax,ay,bx,by,newBRx,newBRy) <= .1) ){
+		if( (ax < bx && ay > by) || (ay == by && ax < bx) ){
+			return vectorProjection(ax,ay,bx,by,newTLx,newTLy);
+		} else if( ax < bx && ay < by ){
+			var coord = vectorProjection(ax,ay,bx,by,newTRx,newTRy);
+			coord[0] -= dyn.width;
+			return coord;
+		} else if( (ax > bx && ay < by) || (ax == bx && ay < by) ){
+			var coord = vectorProjection(ax,ay,bx,by,newBRx,newBRy);
+			coord[0] -= dyn.width;
+			coord[1] -= dyn.height;
+			dyn.onGround = JUMP_GRACE_PERIOD;
+			return coord;
+		} else if( (ax >= bx && ay >= by) ){
+			var coord = vectorProjection(ax,ay,bx,by,newBLx,newBLy);
+			coord[1] -= dyn.height;
+			ctx.fillStyle='red';
+			dyn.onGround = JUMP_GRACE_PERIOD;
+			return coord;
+		}
+	  } 
   }
 }
 
@@ -282,8 +295,11 @@ function crossProduct(ax, ay, bx, by, px, py){
 }
 
 function vectorProjection(ax,ay,bx,by,px,py){
-  var magAB = Math.sqrt( (bx - ax)*(bx - ax) + (by - ay)*(by - ay) );
-  return 
+  var magAB = (bx - ax)*(bx - ax) + (by - ay)*(by - ay);
+  px = px - ax;
+  py = py - ay;
+  return [((px*((bx - ax)*(bx - ax))) / magAB) + ((py*((by - ay)*(bx - ax))) / magAB) + ax,
+          ((py*((bx - ax)*(by - ay))) / magAB) + ((py*((by - ay)*(by - ay))) / magAB) + ay];
 }
 
 function drawSlopedTile(){
@@ -351,7 +367,7 @@ function Player(){
 }
 
 dynamicObjects[0] = new Player();
-staticObjects[0] = new Line(100,100,200,200);
+staticObjects[0] = new Line(200,200,100,200);
 
 
 canvas.onmousemove = function(e){
@@ -382,6 +398,7 @@ canvas.mouseUp = function(){
 
 var oldT = 0;
 function callback(t){
+  ctx.fillStyle='black';
   if(oldT == 0){ oldT=t; }
   var dt = t-oldT;
   dt = 16;
@@ -390,8 +407,8 @@ function callback(t){
   }
   for( var i = 0; i<dynamicObjects.length; i++ ){
     integrateVerlet(dynamicObjects[i], t, dt/100);
+    satisfyConstraints(dynamicObjects, t);
   }
-  satisfyConstraints(dynamicObjects, t);
   ctx.clearRect(0,0,width,height);
   for( var i = 0; i<dynamicObjects.length; i++ ){
     dynamicObjects[i].draw();
