@@ -26,8 +26,8 @@ var peer = new Peer({
   key: 'g7kehz2ic8up7gb9',
 
   // Set highest debug level (log everything!).
-  debug: 3,
-  reliable:true,
+  debug: 0,
+  reliable:false,
   // Set a logging function:
   logFunction: function() {
     var copy = Array.prototype.slice.call(arguments).join(' ');
@@ -72,7 +72,7 @@ $(document).ready(function() {
       var c = peer.connect(requestedPeer, {
         label: 'chat',
         serialization: 'none',
-        reliable: true,
+        reliable: false,
         metadata: {message: 'hi i want to chat with you!'}
       });
       c.on('open', function() {
