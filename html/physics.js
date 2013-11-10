@@ -102,9 +102,13 @@ function satisfyConstraints(dynamicObjects, t){
         if( coords ){
           doA.x = coords[0];
           doA.y = coords[1];
+		  if(coords[2]){
+		  doA.ox = coords[2];
+		  doA.oy = coords[3];
+		  }
 		  if( !aIsPressed && !dIsPressed ){
-			  doA.ox = doA.x;
-			  doA.oy = doA.y;
+			  //doA.ox = doA.x;
+			  //doA.oy = doA.y;
 		  }
         }
       }
@@ -193,22 +197,28 @@ function collideLine(dyn){
 			ctx.fillStyle='yellow';
 			dyn.onGround = 0;
 			coord[0] -= dyn.width;
+			coord[2] -= dyn.width;
 			return coord;
 		} else if( (ax > bx && ay < by)  ){
 			var coord = intersection(ax,ay,bx,by,oldBRx,oldBRy,newBRx,newBRy);
 			coord[0] -= dyn.width;
 			coord[1] -= dyn.height;
+			coord[2] -= dyn.width;
+			coord[3] -= dyn.height;
 			ctx.fillStyle='blue';
 			return coord;
 		} else if( (ax == bx && ay < by) ){
 			var coord = intersection(ax,ay,bx,by,oldBRx,oldBRy,newBRx,newBRy);
 			coord[0] -= dyn.width;
 			coord[1] -= dyn.height;
+			coord[2] -= dyn.width;
+			coord[3] -= dyn.height;
 			ctx.fillStyle='#00ffff';
 			return coord;
 		} else if( (ax > bx && ay >= by) ){
 			var coord = intersection(ax,ay,bx,by,oldBLx,oldBLy,newBLx,newBLy);
 			coord[1] -= dyn.height;
+			coord[3] -= dyn.height;
 			ctx.fillStyle='red';
 			
 			dyn.onGround = JUMP_GRACE_PERIOD;
@@ -237,11 +247,22 @@ function intersection(ax, ay, bx, by, poldx, poldy, pnewx, pnewy){
     return [poldx,poldy];
   }
   var t = crossProduct2D(ax-poldx,ay-poldy,bx-ax,by-ay) / denom;
-  return [poldx + t*(pnewx-poldx), poldy + t*(pnewy-poldy)];
+  var ix = poldx + t*(pnewx-poldx);
+  var iy = poldy + t*(pnewy-poldy);
+  var coord = vectorProjection(ix,iy,bx,by,pnewx,pnewy);
+  console.log(ix,iy,bx,by,pnewx,pnewy,coord);
+  var fx = coord[0] - ix;
+  var fy = coord[1] - iy;
+  fx *= -.9;
+  fy *= -.9;
+  return [ix, iy, ix + fx, iy + fy];
 }
 
 function vectorProjection(ax,ay,bx,by,px,py){
   var magAB = (bx - ax)*(bx - ax) + (by - ay)*(by - ay);
+  if (magAB == 0) {
+    return [ax,ay];
+  }
   px = px - ax;
   py = py - ay;
   return [((px*((bx - ax)*(bx - ax))) / magAB) + ((py*((by - ay)*(bx - ax))) / magAB) + ax,
@@ -274,6 +295,7 @@ staticObjects[3] = new Line(10,10,600,10);
 staticObjects[4] = new Line(600,600,10,600);
 staticObjects[5] = new Line(600,10,600,600);
 staticObjects[6] = new Line(10,600,10,10);
+
 
 
 canvas.mouseDown = function(){
