@@ -65,6 +65,7 @@ $(document).ready(function() {
 
   // Connect to a peer
   $('.connect-button').click(function() {
+    IS_SERVER = true;
     requestedPeer = $('.connect-text').val();
     if (!connectedPeers[requestedPeer]) {
       // Create 2 connections, one labelled chat and another labelled file.

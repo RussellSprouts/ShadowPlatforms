@@ -3,6 +3,7 @@ var ctx = canvas.getContext('2d');
 ctx.fillStyle='rgba(255,0,0,0.4)';
 ctx.strokeStyle='green';
 ctx.lineWidth = 2;
+IS_SERVER = false;
 var width = canvas.width;
 var height = canvas.height;
 var gravity = 10;
@@ -444,7 +445,7 @@ function shorten(l,a){
 }
 
 function randomPosition(){
-  return vec(Math.random()*580+20, Math.random()*580+20)
+  return vec(Math.random()*580+20, Math.random()*300+20)
 }
 
 var SURFACE_FRICTION = .08;
