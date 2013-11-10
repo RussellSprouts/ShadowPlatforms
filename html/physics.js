@@ -23,10 +23,10 @@ var JUMP_GRACE_PERIOD = 5;
 var mouseX = 0;
 var mouseY = 0;
 
-var aIsPressed = false;
-var sIsPressed = false;
-var wIsPressed = false;
-var dIsPressed = false;
+aIsPressed = false;
+sIsPressed = false;
+wIsPressed = false;
+dIsPressed = false;
 
 var mouseD = false;
 
@@ -613,7 +613,11 @@ function callback(t){
 }
 
 function packData(){
-  var str = "GAME_SCORE="+GAME_SCORE +
+  var str = ";aIsDown="+aIsDown +
+            ";dIsDown="+dIsDown +
+            ";aIsDown="+aIsDown +
+            ";wIsDown="+wIsDown +
+            ";$('.score').html("+GAME_SCORE +");"+
             ";player.x = "+player.x +
             ";player.y = "+player.y +
             ";player.ox = "+player.ox +
