@@ -15,7 +15,25 @@
 		
 		<script src="http://cdn.peerjs.com/0.3/peer.min.js"></script>
 		    <script>
-    var peer = new Peer({key: 'g7kehz2ic8up7gb9'});
+var peer = new Peer({
+  // Set API key for cloud server (you don't need this if you're running your
+  // own.
+  key: 'g7kehz2ic8up7gb9',
+
+  // Set highest debug level (log everything!).
+  debug: 3,
+
+  // Set a logging function:
+  logFunction: function() {
+    var copy = Array.prototype.slice.call(arguments).join(' ');
+    $('.log').append(copy + '<br>');
+  },
+
+  // Use a TURN server for more network support
+  config: {'iceServers': [
+    { url: 'stun:stun.l.google.com:19302' }
+  ]} /* Sample servers, please use appropriate ones */
+});
     console.log(peer);
     peer.on('open', function(id) {
       $(function(){
@@ -24,17 +42,22 @@
           var text = $('.connect-text').val();
           console.log("Trying to connect to " + text);
           var conn = peer.connect(text);
+          console.log(conn);
           peer.on('connection', function(conn) { 
             conn.send("I see you!");  
           });
           conn.on('open', function() {
             // Receive messages
+            console.log("Connection opened.")
             conn.on('data', function(data) {
               console.log('Received', data);
             });
-
+            globalConn = 
             // Send messages
             conn.send('Hello!');
+          });
+          conn.on('error', function(err){
+            console.log(err);
           });
         });
       });
