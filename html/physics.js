@@ -70,8 +70,9 @@ function acceleration(){
     x = PLAYER_SPEED;
   }
   
-  if( wIsPressed && true/*player.onGround > 0*/ ){
-    y = -PLAYER_SPEED;
+  if( wIsPressed && player.onGround > 0 ){
+    y = -100*PLAYER_SPEED;
+    player.onGround = 0;
   }
   return vec(x, y);
 }
@@ -90,8 +91,6 @@ function integrateVerlet(b, t, dt){
   b.y += 0.99*y-0.99*oldY+ay*dt*dt;
   b.ox = tempX;
   b.oy = tempY;
-  b.adjustedox = b.ox;
-  b.adjustedoy = b.oy;
 }
 
 function satisfyConstraints(dynamicObjects, t){
@@ -105,8 +104,8 @@ function satisfyConstraints(dynamicObjects, t){
           doA.x = coords[0];
           doA.y = coords[1];
 		      if(coords[2]){
-		        doA.adjustedox = coords[2];
-		        doA.adjustedoy = coords[3];
+		        doA.ox = coords[2];
+		        doA.oy = coords[3];
 		      }
         }
       }
@@ -129,7 +128,13 @@ function Line(startX, startY, endX, endY){
 function drawLine(){
   ctx.beginPath();
   ctx.moveTo(this.ax, this.ay);
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = "black";
   ctx.lineTo(this.bx, this.by);
+  ctx.stroke();
+  ctx.strokeStyle = "gray";
+  ctx.lineWidth = 1;
+  ctx.lineTo(this.ax, this.ay);
   ctx.stroke();
 }
 
@@ -232,7 +237,7 @@ function collideLine(dyn){
     } else if( greaterX(a,b) && lessY(a,b) ){
       ctx.fillStyle='blue';
       adjust = vec(-dyn.width,-dyn.height - .1);
-      dyn.onGround = JUMP_GRACE_PERIOD;
+      dyn.onGround = wIsPressed?0:JUMP_GRACE_PERIOD;
       oPt = oBR;
       pt = BR;
     } else if( equalsX(a,b) && lessY(a,b) ){
@@ -243,6 +248,7 @@ function collideLine(dyn){
     } else if( greaterX(a,b) && greaterEqY(a,b) ){
       ctx.fillStyle='red';
       adjust = vec(0,-dyn.height);
+      dyn.onGround = wIsPressed?0:JUMP_GRACE_PERIOD;
       oPt = oBL;
       pt = BL;
     } else if( equalsX(a,b) && greaterEqY(a,b) ){
@@ -254,7 +260,7 @@ function collideLine(dyn){
     var coords = calculateNew(a,b,oPt,pt)
     var newPos = plus(adjust,vec(coords[0],coords[1])),
         oldPos = plus(adjust,vec(coords[2],coords[3]))
-    return [newPos[0],newPos[1]]
+    return [newPos[0],newPos[1],oldPos[0],oldPos[1]]
   }
 }
 
@@ -427,10 +433,20 @@ function project(a,b){
   return scale(dot(a,b)/len2b,b)
 }
 
-var SURFACE_FRICTION = 1;
+function shorten(l,a){
+  if( !aIsPressed && !dIsPressed ){
+  var l2 = l*l;
+  var lena2 = len2(a);
+  if(lena2 < l2) return vec(0,0);
+  return scale((lena2-l2)/lena2,a)
+  }
+  return a;
+}
+
+var SURFACE_FRICTION = .08;
 function calculateNew(a,b,oP,nP){
-  var newOnAB = plus(a,project(minus(nP,a),minus(b,a)))
-  var oldOnAB = plus(a,project(minus(oP,a),minus(b,a)));
+  var newOnAB = plus(a,project(minus(nP,a),minus(b,a)));
+  var oldOnAB = plus(newOnAB,shorten((SURFACE_FRICTION),minus(oP,newOnAB)))
   return [newOnAB[0],newOnAB[1],oldOnAB[0],oldOnAB[1]];
 }
 /*
