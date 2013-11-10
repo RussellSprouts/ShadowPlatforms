@@ -23,6 +23,9 @@
         $('.connect-button').on('click',function(){
           var text = $('.connect-text').val();
           var conn = peer.connect(text);
+          peer.on('connection', function(conn) { 
+            conn.send("I see you!");  
+          });
           conn.on('open', function() {
             // Receive messages
             conn.on('data', function(data) {

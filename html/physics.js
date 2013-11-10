@@ -12,7 +12,7 @@ var ITERATION_COUNT = 100;
 var player;
 
 
-var PLAYER_SPEED = 5;
+var PLAYER_SPEED = 7;
 var RADIUS = 4;
 var X = 0;
 var Y = 1;
@@ -71,7 +71,7 @@ function acceleration(){
   }
   
   if( wIsPressed && player.onGround > 0 ){
-    y = -100*PLAYER_SPEED;
+    y = -50*PLAYER_SPEED;
     player.onGround = 0;
   }
   return vec(x, y);
@@ -516,7 +516,7 @@ function getPosition(e) {
     return {"x": x, "y": y};
 };
 
-var NUMBER_OF_PLATFORMS = 16;
+var NUMBER_OF_PLATFORMS = 8;
 var NUMBER_OF_WALLS = 4;
 var STATIC_OBJECTS_COUNTER = 0;
 function pushStatic(obj){
