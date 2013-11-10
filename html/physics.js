@@ -619,7 +619,7 @@ function packData(){
             ";player.ox = "+player.ox +
             ";player.oy = "+player.oy +
             ";player.onGround = "+player.onGround +
-            ";player.color = "+player.color + ";";
+            ";player.color = '"+player.color + "';";
   for( var i = 0; i<staticObjects.length; i++){
     var obj = staticObjects[i]
     if( staticObjects[i] instanceof Line ){
