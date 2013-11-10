@@ -569,7 +569,7 @@ $(canvas).click(function(event) {
 
     } else {
       send("handleClick("+JSON.stringify(position)+");")
-      //handleClick(position);
+      handleClick(position);
     }
 });
 
