@@ -8,7 +8,7 @@ var width = canvas.width;
 var height = canvas.height;
 var gravity = 10;
 var ballCount = 0;
-var ITERATION_COUNT = 10;
+var ITERATION_COUNT = 3;
 var player;
 
 
@@ -81,8 +81,8 @@ function integrateVerlet(b, t, dt){
   var y = b.y;
   var tempX = b.x;
   var tempY = b.y;
-  var oldX = b.ox;
-  var oldY = b.oy;
+  var oldX = b.adjustedox ? b.adjustedox : b.ox;
+  var oldY = b.adjustedoy ? b.adjustedoy : b.oy;
   var a = acceleration(b, t);
   var ax = a[0];
   var ay = a[1];
@@ -90,6 +90,8 @@ function integrateVerlet(b, t, dt){
   b.y += 0.99*y-0.99*oldY+ay*dt*dt;
   b.ox = tempX;
   b.oy = tempY;
+  b.adjustedox = b.ox;
+  b.adjustedoy = b.oy;
 }
 
 function satisfyConstraints(dynamicObjects, t){
@@ -103,8 +105,8 @@ function satisfyConstraints(dynamicObjects, t){
           doA.x = coords[0];
           doA.y = coords[1];
 		  if(coords[2]){
-		  doA.ox = coords[2];
-		  doA.oy = coords[3];
+		  doA.adjustedox = coords[2];
+		  doA.adjustedoy = coords[3];
 		  }
 		  if( !aIsPressed && !dIsPressed ){
 			  //doA.ox = doA.x;
@@ -185,48 +187,48 @@ function collideLine(dyn){
   isInBoundingBoxY = (dyn.y >= lowery && dyn.y <= highery) || (lowery >= dyn.y && lowery <= dyn.y+dyn.height) || (highery >= dyn.y && highery <= dyn.y+dyn.height);
   
   if( isInBoundingBoxX && isInBoundingBoxY ){
-	  if( crossProduct(ax,ay,bx,by,oldTLx,oldTLy) >= -1 && crossProduct(ax,ay,bx,by,oldTRx,oldTRy) >= -1 &&
-		  crossProduct(ax,ay,bx,by,oldBLx,oldBLy) >= -1 && crossProduct(ax,ay,bx,by,oldBRx,oldBRy) >= -1 &&
-		 (crossProduct(ax,ay,bx,by,newTLx,newTLy) <= 1 || crossProduct(ax,ay,bx,by,newTRx,newTRy) <= 1 ||
-		  crossProduct(ax,ay,bx,by,newBLx,newBLy) <= 1 || crossProduct(ax,ay,bx,by,newBRx,newBRy) <= 1) ){
+	  if( crossProduct(ax,ay,bx,by,oldTLx,oldTLy) >= 0 && crossProduct(ax,ay,bx,by,oldTRx,oldTRy) >= 0 &&
+		  crossProduct(ax,ay,bx,by,oldBLx,oldBLy) >= 0 && crossProduct(ax,ay,bx,by,oldBRx,oldBRy) >= 0 &&
+		 (crossProduct(ax,ay,bx,by,newTLx,newTLy) < 0 || crossProduct(ax,ay,bx,by,newTRx,newTRy) < 0 ||
+		  crossProduct(ax,ay,bx,by,newBLx,newBLy) < 0 || crossProduct(ax,ay,bx,by,newBRx,newBRy) < 0) ){
 		if( (ax < bx && ay > by) || (ay == by && ax < bx) ){
 			ctx.fillStyle='green';
+			ctx.strokeStyle='black'
 			return vectorProjection(ax,ay,bx,by,oldTLx,oldTLy,newTLx,newTLy);
 		} else if( ax < bx && ay < by ){
 			var coord = intersection(ax,ay,bx,by,oldTRx,oldTRy,newTRx,newTRy);
 			ctx.fillStyle='yellow';
+			ctx.strokeStyle='black'
 			dyn.onGround = 0;
-			coord[0] -= dyn.width;
-			coord[2] -= dyn.width;
+			coord[0] -= dyn.width + 1;
 			return coord;
 		} else if( (ax > bx && ay < by)  ){
 			var coord = intersection(ax,ay,bx,by,oldBRx,oldBRy,newBRx,newBRy);
-			coord[0] -= dyn.width;
-			coord[1] -= dyn.height;
-			coord[2] -= dyn.width;
-			coord[3] -= dyn.height;
+			coord[0] -= dyn.width + 1;
+			coord[1] -= dyn.height + 1;
+			dyn.onGround = JUMP_GRACE_PERIOD;
 			ctx.fillStyle='blue';
+			ctx.strokeStyle='black'
 			return coord;
 		} else if( (ax == bx && ay < by) ){
 			var coord = intersection(ax,ay,bx,by,oldBRx,oldBRy,newBRx,newBRy);
-			coord[0] -= dyn.width;
-			coord[1] -= dyn.height;
-			coord[2] -= dyn.width;
-			coord[3] -= dyn.height;
+			coord[0] -= dyn.width + 1;
+			coord[1] -= dyn.height + 1;
 			ctx.fillStyle='#00ffff';
+			ctx.strokeStyle='black'
 			return coord;
 		} else if( (ax > bx && ay >= by) ){
 			var coord = intersection(ax,ay,bx,by,oldBLx,oldBLy,newBLx,newBLy);
-			coord[1] -= dyn.height;
-			coord[3] -= dyn.height;
+			coord[1] -= dyn.height + 1;
 			ctx.fillStyle='red';
-			
+			ctx.strokeStyle='black'
 			dyn.onGround = JUMP_GRACE_PERIOD;
 			return coord;
 		} else if( ax == bx && ay>= by ) {
 			var coord = intersection(ax,ay,bx,by,oldBLx,oldBLy,newBLx,newBLy);
-			coord[1] -= dyn.height;
+			coord[1] -= dyn.height + 1;
 			ctx.fillStyle='brown';
+			ctx.strokeStyle='black'
 			return coord;
 		}
 	  } 
@@ -242,35 +244,38 @@ function crossProduct2D(x1,y1,x2,y2){
 }
 
 function intersection(ax, ay, bx, by, poldx, poldy, pnewx, pnewy){
-  var denom = crossProduct2D(pnewx-poldx,pnewy-poldy,bx-ax,by-ay)
+  var coords = vectorProjection(bx-ax,by-ay,pnewx-poldx,pnewy-poldy);
+  console.log(coords);
+  return [poldx + coords[0] * .99, poldy + coords[1] * .99];
+
+/*  var denom = crossProduct2D(pnewx-poldx,pnewy-poldy,bx-ax,by-ay)
   if (denom == 0) {
     return [poldx,poldy];
   }
   var t = crossProduct2D(ax-poldx,ay-poldy,bx-ax,by-ay) / denom;
   var ix = poldx + t*(pnewx-poldx);
   var iy = poldy + t*(pnewy-poldy);
-  var coord = vectorProjection(ix,iy,bx,by,pnewx,pnewy);
-  console.log(ix,iy,bx,by,pnewx,pnewy,coord);
+  var coord = vectorProjection(ax,ay,bx,by,pnewx - poldx,pnewy - poldy);
   var fx = coord[0] - ix;
   var fy = coord[1] - iy;
-  fx *= -.9;
-  fy *= -.9;
-  return [ix, iy, ix + fx, iy + fy];
+  console.log(fx,fy);
+  fx*=.5;
+  fy*=.5;
+  return [ix, iy]; */
 }
 
-function vectorProjection(ax,ay,bx,by,px,py){
-  var magAB = (bx - ax)*(bx - ax) + (by - ay)*(by - ay);
+function vectorProjection(bx,by,px,py){
+  var magAB = (bx)*(bx) + (by)*(by);
   if (magAB == 0) {
-    return [ax,ay];
+    return [0,0];
   }
-  px = px - ax;
-  py = py - ay;
-  return [((px*((bx - ax)*(bx - ax))) / magAB) + ((py*((by - ay)*(bx - ax))) / magAB) + ax,
-          ((py*((bx - ax)*(by - ay))) / magAB) + ((py*((by - ay)*(by - ay))) / magAB) + ay];
+  return [((px*(bx*bx)) / magAB) + ((py*(by*bx)) / magAB),
+          ((py*(bx*by)) / magAB) + ((py*(by*by)) / magAB)];
 }
 
 function drawPlayer(){
   ctx.fillRect(this.x, this.y, this.width, this.height);
+  ctx.strokeRect(this.ox, this.oy, this.width, this.height);
 }
 
 function Player(){
@@ -290,6 +295,8 @@ staticObjects[1] = new Line(400,400,300,300);
 staticObjects[2] = new Line(300,300,200,300);
 staticObjects[7] = new Line(100,100,200,200);
 staticObjects[8] = new Line(500,400,400,400);
+staticObjects[9] = new Line(600,100,500,120);
+staticObjects[10] = new Line(400,450,550,400);
 
 staticObjects[3] = new Line(10,10,600,10);
 staticObjects[4] = new Line(600,600,10,600);
@@ -308,6 +315,7 @@ canvas.mouseUp = function(){
 var oldT = 0;
 function callback(t){
   ctx.fillStyle='purple';
+  ctx.strokeStyle='purple'
   var dt = 16;
   if( wIsPressed ){
     //dynamicObjects[0].oy += .1;
