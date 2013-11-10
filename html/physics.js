@@ -1,14 +1,14 @@
 "use strict";
 var canvas = document.getElementById('c');
 var ctx = canvas.getContext('2d');
-ctx.fillStyle='white';
+ctx.fillStyle='rgba(255,0,0,0.4)';
 ctx.strokeStyle='green';
 ctx.lineWidth = 2;
 var width = canvas.width;
 var height = canvas.height;
 var gravity = 10;
 var ballCount = 0;
-var ITERATION_COUNT = 3;
+var ITERATION_COUNT = 100;
 var player;
 
 
@@ -61,7 +61,7 @@ function drawCircle(){
   ctx.fill();
 }
 
-function acceleration(b, t){
+function acceleration(){
   var x = 0;
   var y = gravity;
   if( aIsPressed ){
@@ -70,10 +70,10 @@ function acceleration(b, t){
     x = PLAYER_SPEED;
   }
   
-  if( wIsPressed && player.onGround > 0 ){
-    y = -30*PLAYER_SPEED;
+  if( wIsPressed && true/*player.onGround > 0*/ ){
+    y = -PLAYER_SPEED;
   }
-  return [x, y];
+  return vec(x, y);
 }
 
 function integrateVerlet(b, t, dt){
@@ -81,9 +81,9 @@ function integrateVerlet(b, t, dt){
   var y = b.y;
   var tempX = b.x;
   var tempY = b.y;
-  var oldX = b.adjustedox ? b.adjustedox : b.ox;
-  var oldY = b.adjustedoy ? b.adjustedoy : b.oy;
-  var a = acceleration(b, t);
+  var oldX = b.ox;
+  var oldY = b.oy;
+  var a = acceleration();
   var ax = a[0];
   var ay = a[1];
   b.x += 0.99*x-0.99*oldX+ax*dt*dt;
@@ -104,52 +104,14 @@ function satisfyConstraints(dynamicObjects, t){
         if( coords ){
           doA.x = coords[0];
           doA.y = coords[1];
-		  if(coords[2]){
-		  doA.adjustedox = coords[2];
-		  doA.adjustedoy = coords[3];
-		  }
-		  if( !aIsPressed && !dIsPressed ){
-			  //doA.ox = doA.x;
-			  //doA.oy = doA.y;
-		  }
+		      if(coords[2]){
+		        doA.adjustedox = coords[2];
+		        doA.adjustedoy = coords[3];
+		      }
         }
       }
     }
-    /*
-    for( var a = 0; a<dynamicObjects.length; a++ ){
-      for( var b = 0; b<dynamicObjects.length; b++ ){
-        if( a != b ){
-          var x1 = dynamicObjects[a].x;
-          var x2 = dynamicObjects[b].x;
-          var y1 = dynamicObjects[a].y;
-          var y2 = dynamicObjects[b].y;
-          var deltaX = x2 - x1;
-          var deltaY = y2 - y1;
-          var restLength = dynamicObjects[a].r + dynamicObjects[b].r;
-          if( deltaX < restLength && deltaY < restLength ){
-            var deltaLength = Math.sqrt(deltaX*deltaX+deltaY*deltaY);
-            if( deltaLength < restLength ){
-              var diff = (deltaLength-restLength)/deltaLength;
-              dynamicObjects[a].x += deltaX*0.5*diff;
-              dynamicObjects[a].y += deltaY*0.5*diff;
-              dynamicObjects[b].x -= deltaX*0.5*diff;
-              dynamicObjects[b].y -= deltaY*0.5*diff;
-            }
-          }
-        }
-      }
-    }*/
   }
-}
-    
-function Ball(){
-  this.x = Math.random()*width;
-  this.y = Math.random()*height;
-  this.r = Math.random()*15+4;
-  this.ox = this.x + Math.random()*16-8;
-  this.oy = this.y + Math.random()*16-8;
-  this.draw = drawCircle;
-  this.hit = [];
 }
 
 var dynamicObjects = [];
@@ -171,6 +133,132 @@ function drawLine(){
   ctx.stroke();
 }
 
+var stuffToDraw = [];
+function drawBoundingBox(x1,y1,x2,y2){
+  stuffToDraw.push(function(){
+    ctx.fillRect(x1,y1,x2-x1,y2-y1)
+  });
+}
+
+function drawIntercepts(){
+  stuffToDraw.push(function(){
+    ctx.fillRect(20,10,30,20)
+  });
+}
+
+function drawDebug(){
+  for(var i=0; i<stuffToDraw.length; i++){
+    stuffToDraw[i]();
+  }
+  stuffToDraw = [];
+}
+
+function colinear(a1,a2,b1,b2){
+  var da = minus(a2,a1),
+      db = minus(b2,b1);
+  var ma = slope(da)
+  var mb = slope(db)
+  if( ma==0 && mb==0 ){
+    //horizontal lines
+    return equal(onlyY(a1),onlyY(b1));
+  } else if( ma==mb ){
+    //same slope.
+    var yintA = -ma*a1[0],
+        yintB = -mb*b1[0]
+    if( yintA != yintB ) return false;
+    return lessEqX(vecmin(a1,a2),vecmin(b1,b2)) && lessEqX(vecmin(b1,b2),vecmax(a1,a2))
+        ||  lessEqX(vecmin(b1,b2),vecmin(a1,a2)) && lessEqX(vecmin(a1,a2),vecmax(b1,b2));
+  } else if( (ma!=ma && mb!=mb) ){
+    //vertical lines
+    return equal(onlyX(a1),onlyX(b1));
+  } else {
+    return false;
+  }
+}
+
+function intersects(a1,a2,b1,b2){
+  var b = minus(a2,a1),
+      d = minus(b2,b1);
+  var crossBD = cross(b,d);
+  if( crossBD == 0 ) return colinear(a1,a2,b1,b2);
+  var c = minus(b1,a1);
+  var t = cross(c,d) / crossBD;
+  if( t < 0 || t > 1 ) return false;
+  var u = cross(c,b) / crossBD;
+  if( u < 0 || u > 1) return false;
+  return true
+}
+
+function inBounds(a,b,oP,nP,size){
+  var anycorner = function(f,origin,size){
+    return f(origin) ||
+    f(plus(origin,size)) ||
+    f(plus(origin,onlyX(size))) ||
+    f(plus(origin,onlyY(size)));
+  }
+  var traveled = minus(nP,oP);
+  var intersectsLine = function(start){
+    var end = plus(start,traveled);
+    return intersects(start,end,a,b)
+  }
+  return anycorner(intersectsLine,oP,size);
+}
+
+var EPSILON = 0
+function collideLine(dyn){
+  var curr = vec(dyn.x, dyn.y),
+      old = vec(dyn.ox, dyn.oy);
+  var a = vec(this.ax,this.ay),
+      b = vec(this.bx,this.by);
+  var oTL = old, oTR = plus(old, vec(dyn.width,0)), oBL = plus(old,vec(0,dyn.height)), oBR = plus(old, vec(dyn.width,dyn.height));
+  var TL = curr, TR = plus(curr, vec(dyn.width,0)), BL = plus(curr,vec(0,dyn.height)), BR = plus(curr, vec(dyn.width,dyn.height));
+  var isInBounds = inBounds(a,b,old,curr,vec(dyn.width,dyn.height));
+  //if( isInBounds ) drawBoundingBox(a[0],a[1],b[0],b[1]);
+  if( isInBounds && 
+  side(a,b,oTL) >= -EPSILON && side(a,b,oTR) >= -EPSILON && side(a,b,oBL) >= -EPSILON && side(a,b,oBR) >= -EPSILON &&
+ (side(a,b,TL)  <= EPSILON || side(a,b,TR)  <= EPSILON || side(a,b,BL) <= EPSILON || side(a,b,BR) <= EPSILON )){
+    var adjust, pt, oPt;
+		ctx.strokeStyle='black'
+    if( lessX(a,b) && greaterEqY(a,b) ){
+      ctx.fillStyle='green';
+      adjust = vec(0,.1);
+      oPt = oTL;
+      pt = TL;
+    } else if( lessX(a,b) && lessY(a,b) ){
+      ctx.fillStyle='yellow';
+      adjust = vec(-dyn.width,0);
+      oPt = oTR;
+      pt = TR;
+    } else if( greaterX(a,b) && lessY(a,b) ){
+      ctx.fillStyle='blue';
+      adjust = vec(-dyn.width,-dyn.height - .1);
+      dyn.onGround = JUMP_GRACE_PERIOD;
+      oPt = oBR;
+      pt = BR;
+    } else if( equalsX(a,b) && lessY(a,b) ){
+      ctx.fillStyle='#00ffff';
+      adjust = vec(-dyn.width, 0);
+      oPt = oTR;
+      pt = TR;
+    } else if( greaterX(a,b) && greaterEqY(a,b) ){
+      ctx.fillStyle='red';
+      adjust = vec(0,-dyn.height);
+      oPt = oBL;
+      pt = BL;
+    } else if( equalsX(a,b) && greaterEqY(a,b) ){
+      ctx.fillStyle='brown';
+      adjust = vec(0,0);
+      oPt = oTL;
+      pt = TL;
+    }
+    var coords = calculateNew(a,b,oPt,pt)
+    var newPos = plus(adjust,vec(coords[0],coords[1])),
+        oldPos = plus(adjust,vec(coords[2],coords[3]))
+    return [newPos[0],newPos[1]]
+  }
+}
+
+/*
 function collideLine(dyn){
   var ax = this.ax, bx = this.bx, ay = this.ay, by = this.by;
   var oldTLx = dyn.ox, oldTRx = dyn.ox+dyn.width, oldBLx = dyn.ox, oldBRx = dyn.ox+dyn.width;
@@ -181,52 +269,57 @@ function collideLine(dyn){
   
   var lowerx = Math.min(ax,bx);
   var higherx = Math.max(ax,bx);
+  lowerx -= 2;
+  higherx +=2;
   isInBoundingBoxX = (dyn.x >= lowerx && dyn.x <= higherx) || (lowerx >= dyn.x && lowerx <= dyn.x+dyn.width) || (higherx >= dyn.x && higherx <= dyn.x+dyn.width);
   var lowery = Math.min(ay,by);
   var highery = Math.max(ay,by);
+  lowery -= 2;
+  higherx += 2;
   isInBoundingBoxY = (dyn.y >= lowery && dyn.y <= highery) || (lowery >= dyn.y && lowery <= dyn.y+dyn.height) || (highery >= dyn.y && highery <= dyn.y+dyn.height);
-  
   if( isInBoundingBoxX && isInBoundingBoxY ){
-	  if( crossProduct(ax,ay,bx,by,oldTLx,oldTLy) >= 0 && crossProduct(ax,ay,bx,by,oldTRx,oldTRy) >= 0 &&
-		  crossProduct(ax,ay,bx,by,oldBLx,oldBLy) >= 0 && crossProduct(ax,ay,bx,by,oldBRx,oldBRy) >= 0 &&
-		 (crossProduct(ax,ay,bx,by,newTLx,newTLy) < 0 || crossProduct(ax,ay,bx,by,newTRx,newTRy) < 0 ||
-		  crossProduct(ax,ay,bx,by,newBLx,newBLy) < 0 || crossProduct(ax,ay,bx,by,newBRx,newBRy) < 0) ){
+    drawBoundingBox(lowerx,lowery,higherx,highery);
+	  if( crossProduct(ax,ay,bx,by,oldTLx,oldTLy) >= -2 && crossProduct(ax,ay,bx,by,oldTRx,oldTRy) >= -2 &&
+		  crossProduct(ax,ay,bx,by,oldBLx,oldBLy) >= -2 && crossProduct(ax,ay,bx,by,oldBRx,oldBRy) >= -2 &&
+		 (crossProduct(ax,ay,bx,by,newTLx,newTLy) < 2 || crossProduct(ax,ay,bx,by,newTRx,newTRy) < 2 ||
+		  crossProduct(ax,ay,bx,by,newBLx,newBLy) < 2 || crossProduct(ax,ay,bx,by,newBRx,newBRy) < 2) ){
+    drawIntercepts();
 		if( (ax < bx && ay > by) || (ay == by && ax < bx) ){
 			ctx.fillStyle='green';
 			ctx.strokeStyle='black'
-			return vectorProjection(ax,ay,bx,by,oldTLx,oldTLy,newTLx,newTLy);
+			return intersection(ax,ay,bx,by,oldTLx,oldTLy,newTLx,newTLy);
 		} else if( ax < bx && ay < by ){
 			var coord = intersection(ax,ay,bx,by,oldTRx,oldTRy,newTRx,newTRy);
 			ctx.fillStyle='yellow';
 			ctx.strokeStyle='black'
 			dyn.onGround = 0;
-			coord[0] -= dyn.width + 1;
+			coord[0] -= dyn.width;
 			return coord;
 		} else if( (ax > bx && ay < by)  ){
 			var coord = intersection(ax,ay,bx,by,oldBRx,oldBRy,newBRx,newBRy);
-			coord[0] -= dyn.width + 1;
-			coord[1] -= dyn.height + 1;
+			coord[0] -= dyn.width;
+			coord[1] -= dyn.height;
 			dyn.onGround = JUMP_GRACE_PERIOD;
 			ctx.fillStyle='blue';
 			ctx.strokeStyle='black'
 			return coord;
 		} else if( (ax == bx && ay < by) ){
 			var coord = intersection(ax,ay,bx,by,oldBRx,oldBRy,newBRx,newBRy);
-			coord[0] -= dyn.width + 1;
-			coord[1] -= dyn.height + 1;
+			coord[0] -= dyn.width;
+			coord[1] -= dyn.height;
 			ctx.fillStyle='#00ffff';
 			ctx.strokeStyle='black'
 			return coord;
 		} else if( (ax > bx && ay >= by) ){
 			var coord = intersection(ax,ay,bx,by,oldBLx,oldBLy,newBLx,newBLy);
-			coord[1] -= dyn.height + 1;
+			coord[1] -= dyn.height;
 			ctx.fillStyle='red';
 			ctx.strokeStyle='black'
 			dyn.onGround = JUMP_GRACE_PERIOD;
 			return coord;
 		} else if( ax == bx && ay>= by ) {
 			var coord = intersection(ax,ay,bx,by,oldBLx,oldBLy,newBLx,newBLy);
-			coord[1] -= dyn.height + 1;
+			coord[1] -= dyn.height;
 			ctx.fillStyle='brown';
 			ctx.strokeStyle='black'
 			return coord;
@@ -234,6 +327,90 @@ function collideLine(dyn){
 	  } 
   }
 }
+*/
+
+function vec(x1,x2){
+  return [x1,x2];
+}
+
+function dot(a,b){
+  return a[0]*b[0] + a[1]*b[1];
+}
+function cross(a,b){
+  return a[0]*b[1] - a[1]*b[0];
+}
+function plus(a,b){
+  return [a[0]+b[0],a[1]+b[1]];
+}
+function minus(a,b){
+  return [a[0]-b[0],a[1]-b[1]];
+}
+function scale(k,a){
+  return [k*a[0],k*a[1]]
+}
+function side(a,b,p){
+  return (b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0])
+}
+function greaterX(a,b){
+  return a[0] > b[0]
+}
+function greaterEqX(a,b){
+  return a[0] >= b[0]
+}
+function equalsX(a,b){
+  return a[0]==b[0]
+}
+function lessX(a,b){
+  return a[0]<b[0]
+}
+function lessEqX(a,b){
+  return a[0]<=b[0]
+}
+function greaterY(a,b){
+  return a[1] > b[1]
+}
+function greaterEqY(a,b){
+  return a[1] >= b[1]
+}
+function equalsY(a,b){
+  return a[1]==b[1]
+}
+function lessY(a,b){
+  return a[1]<b[1]
+}
+function lessEqY(a,b){
+  return a[1]<=b[1]
+}
+function onlyX(a){
+  return [a[0],0]
+}
+function onlyY(a){
+  return [0,a[1]]
+}
+function vecmin(a,b){
+  return [Math.min(a[0],b[0]),Math.min(a[1],b[1])]
+}
+function vecmax(a,b){
+  return [Math.max(a[0],b[0]),Math.max(a[1],b[1])]
+}
+function equal(a,b){
+  return a[0]==b[0] && a[1]==b[1];
+}
+function len(a){
+  return Math.sqrt(a[0]*a[0] + a[1]*a[1])
+}
+function len2(a){
+  return a[0]*a[0] + a[1]*a[1]
+}
+function unit(a){
+  var l = len(a)
+  if( l == 0 ) return vec(0,0)
+  return scale(1/l,a)
+} 
+function slope(a){
+  return a[1]/a[0];
+}
+
 
 function crossProduct(ax, ay, bx, by, px, py){
   return ((bx - ax)*(py - ay)-(by-ay)*(px-ax));
@@ -242,27 +419,21 @@ function crossProduct(ax, ay, bx, by, px, py){
 function crossProduct2D(x1,y1,x2,y2){
   return x1*y2 - y1*x2;
 }
-
-function intersection(ax, ay, bx, by, poldx, poldy, pnewx, pnewy){
-  var coords = vectorProjection(bx-ax,by-ay,pnewx-poldx,pnewy-poldy);
-  console.log(coords);
-  return [poldx + coords[0] * .99, poldy + coords[1] * .99];
-
-/*  var denom = crossProduct2D(pnewx-poldx,pnewy-poldy,bx-ax,by-ay)
-  if (denom == 0) {
-    return [poldx,poldy];
+function project(a,b){
+  var len2b = len2(b)
+  if(len2b == 0){
+    return vec(0,0)
   }
-  var t = crossProduct2D(ax-poldx,ay-poldy,bx-ax,by-ay) / denom;
-  var ix = poldx + t*(pnewx-poldx);
-  var iy = poldy + t*(pnewy-poldy);
-  var coord = vectorProjection(ax,ay,bx,by,pnewx - poldx,pnewy - poldy);
-  var fx = coord[0] - ix;
-  var fy = coord[1] - iy;
-  console.log(fx,fy);
-  fx*=.5;
-  fy*=.5;
-  return [ix, iy]; */
+  return scale(dot(a,b)/len2b,b)
 }
+
+var SURFACE_FRICTION = 1;
+function calculateNew(a,b,oP,nP){
+  var newOnAB = plus(a,project(minus(nP,a),minus(b,a)))
+  var oldOnAB = plus(a,project(minus(oP,a),minus(b,a)));
+  return [newOnAB[0],newOnAB[1],oldOnAB[0],oldOnAB[1]];
+}
+/*
 
 function vectorProjection(bx,by,px,py){
   var magAB = (bx)*(bx) + (by)*(by);
@@ -273,9 +444,19 @@ function vectorProjection(bx,by,px,py){
           ((py*(bx*by)) / magAB) + ((py*(by*by)) / magAB)];
 }
 
+function intersection(ax, ay, bx, by, poldx, poldy, pnewx, pnewy){
+  var newCoords = vectorProjection(bx-ax,by-ay,pnewx-ax,pnewy-ay);
+  var oldCoords = vectorProjection(bx-ax,by-ay,poldx-ax,poldy-ay);
+  console.log(newCoords, oldCoords);
+  return [ax + newCoords[0] * SURFACE_FRICTION, ay + newCoords[1] * SURFACE_FRICTION, ax + oldCoords[0] * SURFACE_FRICTION, ay + oldCoords[1] * SURFACE_FRICTION];
+}
+
+*/
+
+
 function drawPlayer(){
   ctx.fillRect(this.x, this.y, this.width, this.height);
-  ctx.strokeRect(this.ox, this.oy, this.width, this.height);
+  //ctx.strokeRect(this.ox, this.oy, this.width, this.height);
 }
 
 function Player(){
@@ -295,8 +476,9 @@ staticObjects[1] = new Line(400,400,300,300);
 staticObjects[2] = new Line(300,300,200,300);
 staticObjects[7] = new Line(100,100,200,200);
 staticObjects[8] = new Line(500,400,400,400);
-staticObjects[9] = new Line(600,100,500,120);
+staticObjects[9] = new Line(600,100,500,200);
 staticObjects[10] = new Line(400,450,550,400);
+staticObjects[11] = new Line(600,100,500,101);
 
 staticObjects[3] = new Line(10,10,600,10);
 staticObjects[4] = new Line(600,600,10,600);
@@ -314,8 +496,7 @@ canvas.mouseUp = function(){
 
 var oldT = 0;
 function callback(t){
-  ctx.fillStyle='purple';
-  ctx.strokeStyle='purple'
+  console.log(player.x,player.y)
   var dt = 16;
   if( wIsPressed ){
     //dynamicObjects[0].oy += .1;
@@ -323,8 +504,9 @@ function callback(t){
   player.onGround--;
   for( var i = 0; i<dynamicObjects.length; i++ ){
     integrateVerlet(dynamicObjects[i], t, dt/100);
-    satisfyConstraints(dynamicObjects, t);
+    
   }
+  satisfyConstraints(dynamicObjects, t);
   ctx.clearRect(0,0,width,height);
   for( var i = 0; i<dynamicObjects.length; i++ ){
     dynamicObjects[i].draw();
@@ -332,8 +514,8 @@ function callback(t){
   for( var i = 0; i<staticObjects.length; i++ ){
     staticObjects[i].draw();
   }
+  drawDebug();
   oldT = t;
   window.requestAnimationFrame(callback);
 }
-
 window.requestAnimationFrame(callback);
