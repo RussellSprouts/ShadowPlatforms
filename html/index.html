@@ -16,12 +16,13 @@
 		<script src="http://cdn.peerjs.com/0.3/peer.min.js"></script>
 		    <script>
     var peer = new Peer({key: 'g7kehz2ic8up7gb9'});
-    
+    console.log(peer);
     peer.on('open', function(id) {
       $(function(){
         $('.myid').html(id);
         $('.connect-button').on('click',function(){
           var text = $('.connect-text').val();
+          console.log("Trying to connect to " + text);
           var conn = peer.connect(text);
           peer.on('connection', function(conn) { 
             conn.send("I see you!");  
