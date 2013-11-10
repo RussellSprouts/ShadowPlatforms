@@ -209,7 +209,7 @@ function inBounds(a,b,oP,nP,size){
   return anycorner(intersectsLine,oP,size);
 }
 
-var EPSILON = 0
+var EPSILON = 1
 function collideLine(dyn){
   var curr = vec(dyn.x, dyn.y),
       old = vec(dyn.ox, dyn.oy);
@@ -231,7 +231,7 @@ function collideLine(dyn){
       pt = TL;
     } else if( lessX(a,b) && lessY(a,b) ){
       ctx.fillStyle='yellow';
-      adjust = vec(-dyn.width,0);
+      adjust = vec(-dyn.width, .1);
       oPt = oTR;
       pt = TR;
     } else if( greaterX(a,b) && lessY(a,b) ){
@@ -247,7 +247,7 @@ function collideLine(dyn){
       pt = TR;
     } else if( greaterX(a,b) && greaterEqY(a,b) ){
       ctx.fillStyle='red';
-      adjust = vec(0,-dyn.height);
+      adjust = vec(0,-dyn.height  - .1);
       dyn.onGround = wIsPressed?0:JUMP_GRACE_PERIOD;
       oPt = oBL;
       pt = BL;
@@ -487,32 +487,68 @@ function Player(){
 
 dynamicObjects[0] = new Player();
 player = dynamicObjects[0];
-staticObjects[0] = new Line(200,200,100,200);
-staticObjects[1] = new Line(400,400,300,300);
-staticObjects[2] = new Line(300,300,200,300);
-staticObjects[7] = new Line(100,100,200,200);
-staticObjects[8] = new Line(500,400,400,400);
-staticObjects[9] = new Line(600,100,500,200);
-staticObjects[10] = new Line(400,450,550,400);
-staticObjects[11] = new Line(600,100,500,101);
-
-staticObjects[3] = new Line(10,10,600,10);
-staticObjects[4] = new Line(600,600,10,600);
-staticObjects[5] = new Line(600,10,600,600);
-staticObjects[6] = new Line(10,600,10,10);
 
 
+staticObjects[0] = new Line(10,10,600,10);
+staticObjects[1] = new Line(600,600,10,600);
+staticObjects[2] = new Line(600,10,600,600);
+staticObjects[3] = new Line(10,600,10,10);
 
-canvas.mouseDown = function(){
-  mouseD = true;
+function getPosition(e) {
+
+    //this section is from http://www.quirksmode.org/js/events_properties.html
+    var targ;
+    if (!e)
+        e = window.event;
+    if (e.target)
+        targ = e.target;
+    else if (e.srcElement)
+        targ = e.srcElement;
+    if (targ.nodeType == 3) // defeat Safari bug
+        targ = targ.parentNode;
+
+    // jQuery normalizes the pageX and pageY
+    // pageX,Y are the mouse positions relative to the document
+    // offset() returns the position of the element relative to the document
+    var x = e.pageX - $(targ).offset().left;
+    var y = e.pageY - $(targ).offset().top;
+
+    return {"x": x, "y": y};
+};
+
+var NUMBER_OF_PLATFORMS = 16;
+var NUMBER_OF_WALLS = 4;
+var STATIC_OBJECTS_COUNTER = 0;
+function pushStatic(obj){
+  if( staticObjects.length < NUMBER_OF_PLATFORMS + NUMBER_OF_WALLS ){
+    staticObjects.push(obj);
+  } else {
+    staticObjects[NUMBER_OF_WALLS+(STATIC_OBJECTS_COUNTER%NUMBER_OF_PLATFORMS)] = obj;
+    STATIC_OBJECTS_COUNTER++;
+  }
 }
-canvas.mouseUp = function(){
+
+// now just make sure you use this with jQuery
+// obviously you can use other events other than click
+$(canvas).click(function(event) {
+    // jQuery would normalize the event
+    var position = getPosition(event);
+    //now you can use the x and y positions
+    
+    pushStatic(new Line(position.x+20,position.y-20,position.x-20,position.y-20))
+    pushStatic(new Line(position.x-20,position.y+20,position.x+20,position.y+20))
+    pushStatic(new Line(position.x-20,position.y-20,position.x-20,position.y+20))
+    pushStatic(new Line(position.x+20,position.y+20,position.x+20,position.y-20))
+});
+
+
+var lastMouseX = 0, lastMouseY = 0;
+canvas.mouseUp = function(e){
   mouseD = false;
 }
 
 var oldT = 0;
 function callback(t){
-  console.log(player.x,player.y)
   var dt = 16;
   if( wIsPressed ){
     //dynamicObjects[0].oy += .1;
