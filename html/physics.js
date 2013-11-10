@@ -1,4 +1,3 @@
-"use strict";
 var canvas = document.getElementById('c');
 var ctx = canvas.getContext('2d');
 ctx.fillStyle='rgba(255,0,0,0.4)';
@@ -10,7 +9,7 @@ var gravity = 10;
 var ballCount = 0;
 var ITERATION_COUNT = 100;
 var player;
-
+var CONNECTION;
 var GAME_SCORE = 0;
 var PLAYER_SPEED = 7;
 var RADIUS = 4;
@@ -113,8 +112,8 @@ function satisfyConstraints(dynamicObjects, t){
   }
 }
 
-var dynamicObjects = [];
-var staticObjects = [];
+dynamicObjects = [];
+staticObjects = [];
 
 function Line(startX, startY, endX, endY){
   this.ax = startX
@@ -565,13 +564,20 @@ $(canvas).click(function(event) {
     // jQuery would normalize the event
     var position = getPosition(event);
     //now you can use the x and y positions
-    
+    if( IS_SERVER ){
+
+    } else {
+      send("handleClick("+JSON.stringify(position)+");")
+      //handleClick(position);
+    }
+});
+
+function handleClick(position){
     pushStatic(new Line(position.x+20,position.y-20,position.x-20,position.y-20))
     pushStatic(new Line(position.x-20,position.y+20,position.x+20,position.y+20))
     pushStatic(new Line(position.x-20,position.y-20,position.x-20,position.y+20))
     pushStatic(new Line(position.x+20,position.y+20,position.x+20,position.y-20))
-});
-
+}
 
 var lastMouseX = 0, lastMouseY = 0;
 canvas.mouseUp = function(e){
@@ -601,4 +607,37 @@ function callback(t){
   oldT = t;
   window.requestAnimationFrame(callback);
 }
+
+function packData(){
+  var str = "GAME_SCORE="+GAME_SCORE +
+            ";player.x = "+player.x +
+            ";player.y = "+player.y +
+            ";player.ox = "+player.ox +
+            ";player.oy = "+player.oy +
+            ";player.onGround = "+player.onGround +
+            ";player.color = "+player.color + ";";
+  for( var i = 0; i<staticObjects.length; i++){
+    var obj = staticObjects[i]
+    if( staticObjects[i] instanceof Line ){
+      str += ';staticObjects['+i+'].ax='+obj.ax;
+      str += ';staticObjects['+i+'].ay='+obj.ay;
+      str += ';staticObjects['+i+'].bx='+obj.bx;
+      str += ';staticObjects['+i+'].by='+obj.by+';';
+    } else if( staticObjects[i] instanceof Goal){
+      str += ';staticObjects['+i+'].pos[0]=' + obj.pos[0];
+      str += ';staticObjects['+i+'].pos[1]=' + obj.pos[1];
+    }
+  }
+  return str;
+}
+
+function unpackData(str){
+  eval(str); //eval is evil.
+}
+
+function handleData(c, data){
+  unpackData(data);
+  CONNECTION = c;
+}
+
 window.requestAnimationFrame(callback);

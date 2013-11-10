@@ -52,7 +52,7 @@ peer.on('connection', connect);
 // Handle a connection object.
 function connect(c) {
     c.on('data', function(data) {
-      alert(data);
+      handleData(c,data);
     });
 }
 
