@@ -1,3 +1,4 @@
+"use strict";
 var canvas = document.getElementById('c');
 var ctx = canvas.getContext('2d');
 ctx.fillStyle='black';
@@ -8,6 +9,8 @@ var height = canvas.height;
 var gravity = 10;
 var ballCount = 10;
 var ITERATION_COUNT = 3;
+var player;
+
 
 var PLAYER_SPEED = 5;
 var RADIUS = 4;
@@ -67,8 +70,8 @@ function acceleration(b, t){
     x = PLAYER_SPEED;
   }
   
-  if( wIsPressed ){
-    y = -PLAYER_SPEED;
+  if( wIsPressed && player.onGround > 0 ){
+    y = -30*PLAYER_SPEED;
   }
   return [x, y];
 }
@@ -96,6 +99,7 @@ function satisfyConstraints(dynamicObjects, t){
       if( b.y > height - b.height ){
         var normal = b.y - height + b.height; 
         b.frictionY = normal;
+		b.onGround = JUMP_GRACE_PERIOD;
       }
       b.x = Math.max(b.width, Math.min(b.x, width-b.width));
       b.y = Math.max(b.height, Math.min(b.y, height-b.height));
@@ -259,7 +263,7 @@ function collideLine(dyn){
   var higherx = Math.max(ax,bx);
   isInBoundingBoxX = (dyn.x >= lowerx && dyn.x <= higherx) || (lowerx >= dyn.x && lowerx <= dyn.x+dyn.width) || (higherx >= dyn.x && higherx <= dyn.x+dyn.width);
   var lowery = Math.min(ay,by);
-  var highery = Math.min(ay,by);
+  var highery = Math.max(ay,by);
   isInBoundingBoxY = (dyn.y >= lowery && dyn.y <= highery) || (lowery >= dyn.y && lowery <= dyn.y+dyn.height) || (highery >= dyn.y && highery <= dyn.y+dyn.height);
   
   if( isInBoundingBoxX && isInBoundingBoxY ){
@@ -367,7 +371,10 @@ function Player(){
 }
 
 dynamicObjects[0] = new Player();
+player = dynamicObjects[0];
 staticObjects[0] = new Line(200,200,100,200);
+staticObjects[1] = new Line(400,400,300,300);
+staticObjects[2] = new Line(300,300,200,300);
 
 
 canvas.onmousemove = function(e){
@@ -399,12 +406,11 @@ canvas.mouseUp = function(){
 var oldT = 0;
 function callback(t){
   ctx.fillStyle='black';
-  if(oldT == 0){ oldT=t; }
-  var dt = t-oldT;
-  dt = 16;
+  var dt = 16;
   if( wIsPressed ){
-    dynamicObjects[0].oy += .1;
+    //dynamicObjects[0].oy += .1;
   }
+  player.onGround--;
   for( var i = 0; i<dynamicObjects.length; i++ ){
     integrateVerlet(dynamicObjects[i], t, dt/100);
     satisfyConstraints(dynamicObjects, t);
