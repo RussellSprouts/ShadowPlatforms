@@ -631,6 +631,10 @@ function packData(){
   return str;
 }
 
+function send(data){
+  CONNECTION.send(data);
+}
+
 function unpackData(str){
   eval(str); //eval is evil.
 }
