@@ -620,7 +620,7 @@ function callback(t){
 }
 
 function packData(){
-  var str = ";aIsPressed="+aIsPressed +
+  var str = "$('.score').text($('.score').text()+1);aIsPressed="+aIsPressed +
             ";dIsPressed="+dIsPressed +
             ";aIsPressed="+aIsPressed +
             ";wIsPressed="+wIsPressed +
