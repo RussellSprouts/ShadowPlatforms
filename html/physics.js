@@ -1,6 +1,8 @@
 var canvas = document.getElementById('c');
 var ctx = canvas.getContext('2d');
 ctx.fillStyle='black';
+ctx.strokeStyle='blue';
+ctx.lineWidth = 2;
 var width = canvas.width;
 var height = canvas.height;
 var gravity = 10;
@@ -233,6 +235,55 @@ function Line(startX, startY, endX, endY){
   this.ay = startY
   this.bx = endX
   this.by = endY
+  this.draw = drawLine;
+  this.collide = collideLine;
+}
+
+function drawLine(){
+  ctx.beginPath();
+  ctx.moveTo(this.ax, this.ay);
+  ctx.lineTo(this.bx, this.by);
+  ctx.stroke();
+}
+
+function collideLine(dyn){
+  var ax = this.ax, bx = this.bx, ay = this.ay, by = this.by;
+  var oldTLx = dyn.ox, oldTRx = dyn.ox+dyn.width, oldBLx = dyn.ox, oldBRx = dyn.ox+dyn.width;
+  var oldTLy = dyn.oy, oldTRy = dyn.oy, oldBLy = dyn.oy+dyn.height, oldBRy = dyn.oy+dyn.height;
+  var newTLx = dyn.x, newTRx = dyn.x+dyn.width, newBLx = dyn.x, newBRx = dyn.x+dyn.width;
+  var newTLy = dyn.y, newTRy = dyn.y, newBLy = dyn.y+dyn.height, newBRy = dyn.y+dyn.height;
+  
+  if( crossProduct(ax,ay,bx,by,oldTLx,oldTLy) >= 0 && crossProduct(ax,ay,bx,by,oldTRx,oldTRy) >= 0 &&
+	  crossProduct(ax,ay,bx,by,oldBLx,oldBLy) >= 0 && crossProduct(ax,ay,bx,by,oldBRx,oldBRy) >= 0 &&
+	  (crossProduct(ax,ay,bx,by,newTLx,newTLy) < 0 || crossProduct(ax,ay,bx,by,newTRx,newTRy) < 0 ||
+	   crossProduct(ax,ay,bx,by,newBLx,newBLy) < 0 || crossProduct(ax,ay,bx,by,newBRx,newBRy) < 0) ){
+    if( ax < bx && ay > by ){
+		return [];
+    } else if( ax < bx && ay < by ){
+		return [];
+    } else if( ax > bx && ay < by ){
+		return [];
+    } else if( ax > bx && ay > by ){
+		return [];
+    } else if( ax == bx && ay < by ){
+		return [];
+    } else if( ax == bx && ay > by ){
+		return [];
+    } else if( ay == by && ax < bx ){
+		return [];
+	} else if( ay == by && ax > bx ){
+		return [];
+	}
+  }
+}
+
+function crossProduct(ax, ay, bx, by, px, py){
+  return ((bx - ax)*(py - ay)-(by-ay)*(px-ax));
+}
+
+function vectorProjection(ax,ay,bx,by,px,py){
+  var magAB = Math.sqrt( (bx - ax)*(bx - ax) + (by - ay)*(by - ay) );
+  return 
 }
 
 function drawSlopedTile(){
@@ -300,22 +351,7 @@ function Player(){
 }
 
 dynamicObjects[0] = new Player();
-staticObjects[0] = new SolidTile(100, height - 20);
-staticObjects[1] = new SolidTile(140, height - 20);
-staticObjects[2] = new BottomlessTile(200, height - 60);
-staticObjects[3] = new BottomlessTile(220, height - 60);
-staticObjects[4] = new BottomlessTile(240, height - 60);
-staticObjects[5] = new BottomlessTile(260, height - 60);
-staticObjects[6] = new BottomlessTile(280, height - 60);
-staticObjects[7] = new BottomlessTile(300, height - 60);
-staticObjects[8] = new BottomlessTile(320, height - 60);
-staticObjects[9] = new SlopedTile(80,height-20, 0, 20);
-staticObjects[10] = new SolidTile(120, height - 20);
-staticObjects[11] = new SolidTile(120, height - 40);
-staticObjects[12] = new SolidTile(120, height - 60);
-staticObjects[13] = new SolidTile(120, height - 80);
-staticObjects[14] = new SolidTile(280, height - 40);
-staticObjects[15] = new SolidTile(300, height - 20);
+staticObjects[0] = new Line(100,100,200,200);
 
 
 canvas.onmousemove = function(e){
