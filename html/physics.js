@@ -608,7 +608,14 @@ function callback(t){
   oldT = t;
   window.requestAnimationFrame(callback);
   if( CONNECTION && IS_SERVER ){
-    send(packData());
+    if( Math.random()<.2 ){
+      send(packData());
+    } else {
+      send(";aIsPressed="+aIsPressed +
+            ";dIsPressed="+dIsPressed +
+            ";aIsPressed="+aIsPressed +
+            ";wIsPressed="+wIsPressed)
+    }
   }
 }
 
@@ -636,7 +643,7 @@ function packData(){
       str += ';staticObjects['+i+'].pos[1]=' + obj.pos[1];
     }
   }
-  return str;
+  return 'eval(("'+str.replace('staticObjects','QW')+'").replace("QW","staticObjects"))';
 }
 
 function send(data){
