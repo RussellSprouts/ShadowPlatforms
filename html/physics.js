@@ -607,6 +607,9 @@ function callback(t){
   drawDebug();
   oldT = t;
   window.requestAnimationFrame(callback);
+  if( CONNECTION ){
+    send(packData());
+  }
 }
 
 function packData(){
