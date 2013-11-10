@@ -613,10 +613,10 @@ function callback(t){
 }
 
 function packData(){
-  var str = ";aIsDown="+aIsDown +
-            ";dIsDown="+dIsDown +
-            ";aIsDown="+aIsDown +
-            ";wIsDown="+wIsDown +
+  var str = ";aIsPressed="+aIsPressed +
+            ";dIsPressed="+dIsPressed +
+            ";aIsPressed="+aIsPressed +
+            ";wIsPressed="+wIsPressed +
             ";$('.score').html("+GAME_SCORE +");"+
             ";player.x = "+player.x +
             ";player.y = "+player.y +
