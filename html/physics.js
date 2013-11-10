@@ -187,34 +187,34 @@ function collideLine(dyn){
 		  crossProduct(ax,ay,bx,by,newBLx,newBLy) <= 1 || crossProduct(ax,ay,bx,by,newBRx,newBRy) <= 1) ){
 		if( (ax < bx && ay > by) || (ay == by && ax < bx) ){
 			ctx.fillStyle='green';
-			return vectorProjection(ax,ay,bx,by,newTLx,newTLy);
+			return vectorProjection(ax,ay,bx,by,oldTLx,oldTLy,newTLx,newTLy);
 		} else if( ax < bx && ay < by ){
-			var coord = vectorProjection(ax,ay,bx,by,newTRx,newTRy);
+			var coord = intersection(ax,ay,bx,by,oldTRx,oldTRy,newTRx,newTRy);
 			ctx.fillStyle='yellow';
 			dyn.onGround = 0;
 			coord[0] -= dyn.width;
 			return coord;
 		} else if( (ax > bx && ay < by)  ){
-			var coord = vectorProjection(ax,ay,bx,by,newBRx,newBRy);
+			var coord = intersection(ax,ay,bx,by,oldBRx,oldBRy,newBRx,newBRy);
 			coord[0] -= dyn.width;
 			coord[1] -= dyn.height;
 			ctx.fillStyle='blue';
 			return coord;
 		} else if( (ax == bx && ay < by) ){
-			var coord = vectorProjection(ax,ay,bx,by,newBRx,newBRy);
+			var coord = intersection(ax,ay,bx,by,oldBRx,oldBRy,newBRx,newBRy);
 			coord[0] -= dyn.width;
 			coord[1] -= dyn.height;
 			ctx.fillStyle='#00ffff';
 			return coord;
 		} else if( (ax > bx && ay >= by) ){
-			var coord = vectorProjection(ax,ay,bx,by,newBLx,newBLy);
+			var coord = intersection(ax,ay,bx,by,oldBLx,oldBLy,newBLx,newBLy);
 			coord[1] -= dyn.height;
 			ctx.fillStyle='red';
 			
 			dyn.onGround = JUMP_GRACE_PERIOD;
 			return coord;
 		} else if( ax == bx && ay>= by ) {
-			var coord = vectorProjection(ax,ay,bx,by,newBLx,newBLy);
+			var coord = intersection(ax,ay,bx,by,oldBLx,oldBLy,newBLx,newBLy);
 			coord[1] -= dyn.height;
 			ctx.fillStyle='brown';
 			return coord;
@@ -225,6 +225,19 @@ function collideLine(dyn){
 
 function crossProduct(ax, ay, bx, by, px, py){
   return ((bx - ax)*(py - ay)-(by-ay)*(px-ax));
+}
+
+function crossProduct2D(x1,y1,x2,y2){
+  return x1*y2 - y1*x2;
+}
+
+function intersection(ax, ay, bx, by, poldx, poldy, pnewx, pnewy){
+  var denom = crossProduct2D(pnewx-poldx,pnewy-poldy,bx-ax,by-ay)
+  if (denom == 0) {
+    return [poldx,poldy];
+  }
+  var t = crossProduct2D(ax-poldx,ay-poldy,bx-ax,by-ay) / denom;
+  return [poldx + t*(pnewx-poldx), poldy + t*(pnewy-poldy)];
 }
 
 function vectorProjection(ax,ay,bx,by,px,py){
@@ -282,7 +295,7 @@ function callback(t){
     integrateVerlet(dynamicObjects[i], t, dt/100);
     satisfyConstraints(dynamicObjects, t);
   }
-  //ctx.clearRect(0,0,width,height);
+  ctx.clearRect(0,0,width,height);
   for( var i = 0; i<dynamicObjects.length; i++ ){
     dynamicObjects[i].draw();
   }
