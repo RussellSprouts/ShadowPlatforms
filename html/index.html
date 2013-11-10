@@ -30,6 +30,7 @@ var peer = new Peer({
   logFunction: function() {
     var copy = Array.prototype.slice.call(arguments).join(' ');
     $('.log').append(copy + '<br>');
+  reliable:true
   },
 
   // Use a TURN server for more network support
