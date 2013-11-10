@@ -607,7 +607,7 @@ function callback(t){
   drawDebug();
   oldT = t;
   window.requestAnimationFrame(callback);
-  if( CONNECTION ){
+  if( CONNECTION && IS_SERVER ){
     send(packData());
   }
 }
