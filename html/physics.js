@@ -11,7 +11,7 @@ var ballCount = 0;
 var ITERATION_COUNT = 100;
 var player;
 
-
+var GAME_SCORE = 0;
 var PLAYER_SPEED = 7;
 var RADIUS = 4;
 var X = 0;
@@ -194,13 +194,14 @@ function intersects(a1,a2,b1,b2){
   return true
 }
 
-function inBounds(a,b,oP,nP,size){
-  var anycorner = function(f,origin,size){
+var anycorner = function(f,origin,size){
     return f(origin) ||
     f(plus(origin,size)) ||
     f(plus(origin,onlyX(size))) ||
     f(plus(origin,onlyY(size)));
-  }
+}
+
+function inBounds(a,b,oP,nP,size){
   var traveled = minus(nP,oP);
   var intersectsLine = function(start){
     var end = plus(start,traveled);
@@ -225,34 +226,34 @@ function collideLine(dyn){
     var adjust, pt, oPt;
 		ctx.strokeStyle='black'
     if( lessX(a,b) && greaterEqY(a,b) ){
-      ctx.fillStyle='green';
+      player.color='green';
       adjust = vec(0,.1);
       oPt = oTL;
       pt = TL;
     } else if( lessX(a,b) && lessY(a,b) ){
-      ctx.fillStyle='yellow';
+      player.color='yellow';
       adjust = vec(-dyn.width, .1);
       oPt = oTR;
       pt = TR;
     } else if( greaterX(a,b) && lessY(a,b) ){
-      ctx.fillStyle='blue';
+      player.color='blue';
       adjust = vec(-dyn.width,-dyn.height - .1);
       dyn.onGround = wIsPressed?0:JUMP_GRACE_PERIOD;
       oPt = oBR;
       pt = BR;
     } else if( equalsX(a,b) && lessY(a,b) ){
-      ctx.fillStyle='#00ffff';
+      player.color='#00ffff';
       adjust = vec(-dyn.width, 0);
       oPt = oTR;
       pt = TR;
     } else if( greaterX(a,b) && greaterEqY(a,b) ){
-      ctx.fillStyle='red';
+      player.color='red';
       adjust = vec(0,-dyn.height  - .1);
       dyn.onGround = wIsPressed?0:JUMP_GRACE_PERIOD;
       oPt = oBL;
       pt = BL;
     } else if( equalsX(a,b) && greaterEqY(a,b) ){
-      ctx.fillStyle='brown';
+      player.color='brown';
       adjust = vec(0,0);
       oPt = oTL;
       pt = TL;
@@ -443,6 +444,10 @@ function shorten(l,a){
   return a;
 }
 
+function randomPosition(){
+  return vec(Math.random()*580+20, Math.random()*580+20)
+}
+
 var SURFACE_FRICTION = .08;
 function calculateNew(a,b,oP,nP){
   var newOnAB = plus(a,project(minus(nP,a),minus(b,a)));
@@ -471,7 +476,10 @@ function intersection(ax, ay, bx, by, poldx, poldy, pnewx, pnewy){
 
 
 function drawPlayer(){
+  var temp = ctx.fillStyle
+  ctx.fillStyle = this.color;
   ctx.fillRect(this.x, this.y, this.width, this.height);
+  ctx.fillStyle = temp;
   //ctx.strokeRect(this.ox, this.oy, this.width, this.height);
 }
 
@@ -485,6 +493,29 @@ function Player(){
   this.ox = 100;
 }
 
+function Goal(){
+  this.pos = randomPosition();
+  this.draw = drawGoal;
+  this.collide = collideGoal;
+}
+
+function collideGoal(p){
+  var p1 = vec(p.x,p.y)
+  var p2 = vec(p.x+p.width,p.y+p.height)
+  var this1 = this.pos
+  var thisS = vec(this.pos[0]+20,this.pos[1]+20);
+  if( (this1[0] < p2[0] == thisS[0] > p1[0]) &&
+      (this1[1] < p2[1] == thisS[1] > p1[1])){
+    this.pos = randomPosition();
+    $('.score').html(++GAME_SCORE);
+  }
+}
+
+function drawGoal(){
+  ctx.fillStyle = 'gold';
+  ctx.fillRect(this.pos[0]-10,this.pos[1]-10,20,20)
+}
+
 dynamicObjects[0] = new Player();
 player = dynamicObjects[0];
 
@@ -493,7 +524,7 @@ staticObjects[0] = new Line(10,10,600,10);
 staticObjects[1] = new Line(600,600,10,600);
 staticObjects[2] = new Line(600,10,600,600);
 staticObjects[3] = new Line(10,600,10,10);
-
+staticObjects[4] = new Goal();
 function getPosition(e) {
 
     //this section is from http://www.quirksmode.org/js/events_properties.html
@@ -517,7 +548,7 @@ function getPosition(e) {
 };
 
 var NUMBER_OF_PLATFORMS = 8;
-var NUMBER_OF_WALLS = 4;
+var NUMBER_OF_WALLS = 5;
 var STATIC_OBJECTS_COUNTER = 0;
 function pushStatic(obj){
   if( staticObjects.length < NUMBER_OF_PLATFORMS + NUMBER_OF_WALLS ){

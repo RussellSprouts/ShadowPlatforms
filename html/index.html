@@ -7,12 +7,15 @@
     <p>Your id is: <span class="myid">loading...</span></p>
     <input class="connect-text" type="text" placeholder="Friend's id..."/>
     <button class="connect-button">Submit</button>
-		<canvas id='c' height=700 width=1368></canvas>
-    
+		<canvas id='c' height=700 width=700></canvas>
+    <div class="scoreboard" style="float: right;">
+    <p>Your score is: <span class="score">0</span></p>
+    </div>
+    <div class="log"></div>
     <script src="jquery.js"></script>
 		<script src="keypress.js"></script>
 		<script src="physics.js"></script>
-		
+		<!--
 		<script src="http://cdn.peerjs.com/0.3/peer.min.js"></script>
 		    <script>
 var peer = new Peer({
@@ -62,6 +65,6 @@ var peer = new Peer({
         });
       });
     });
-    </script>
+    </script>-->
 	</body>
 </html>
