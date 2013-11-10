@@ -18,6 +18,8 @@
 		
 		<script src="http://cdn.peerjs.com/0.3/peer.min.js"></script>
 		    <script>
+// Connect to PeerJS, have server assign an ID instead of providing one
+// Showing off some of the configs available with PeerJS :).
 var peer = new Peer({
   // Set API key for cloud server (you don't need this if you're running your
   // own.
@@ -25,12 +27,11 @@ var peer = new Peer({
 
   // Set highest debug level (log everything!).
   debug: 3,
-
+  reliable:true,
   // Set a logging function:
   logFunction: function() {
     var copy = Array.prototype.slice.call(arguments).join(' ');
     $('.log').append(copy + '<br>');
-  reliable:true
   },
 
   // Use a TURN server for more network support
@@ -38,33 +39,79 @@ var peer = new Peer({
     { url: 'stun:stun.l.google.com:19302' }
   ]} /* Sample servers, please use appropriate ones */
 });
-    console.log(peer);
-    peer.on('open', function(id) {
-      $(function(){
-        $('.myid').html(id);
-        $('.connect-button').on('click',function(){
-          var text = $('.connect-text').val();
-          console.log("Trying to connect to " + text);
-          var conn = peer.connect(text);
-          console.log(conn);
-          peer.on('connection', function(conn) { 
-            conn.send("I see you!");  
-          });
-          conn.on('open', function() {
-            // Receive messages
-            console.log("Connection opened.")
-            conn.on('data', function(data) {
-              console.log('Received', data);
-            });
-            // Send messages
-            conn.send('Hello!');
-          });
-          conn.on('error', function(err){
-            console.log(err);
-          });
-        });
+var connectedPeers = {};
+
+// Show this peer's ID.
+peer.on('open', function(id){
+  $('.myid').text(id);
+});
+
+// Await connections from others
+peer.on('connection', connect);
+
+// Handle a connection object.
+function connect(c) {
+    c.on('data', function(data) {
+      alert(data);
+    }
+}
+
+$(document).ready(function() {
+
+  function doNothing(e){
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  // Connect to a peer
+  $('.connect-button').click(function() {
+    requestedPeer = $('.connect-text').val();
+    if (!connectedPeers[requestedPeer]) {
+      // Create 2 connections, one labelled chat and another labelled file.
+      var c = peer.connect(requestedPeer, {
+        label: 'chat',
+        serialization: 'none',
+        reliable: true,
+        metadata: {message: 'hi i want to chat with you!'}
       });
+      c.on('open', function() {
+        connect(c);
+      });
+      c.on('error', function(err) { alert(err); });
+    }
+    connectedPeers[requestedPeer] = 1;
+  });
+
+
+  // Goes through each active peer and calls FN on its connections.
+  function eachActiveConnection(fn) {
+    var actives = $('.active');
+    var checkedIds = {};
+    actives.each(function() {
+      var peerId = $(this).attr('id');
+
+      if (!checkedIds[peerId]) {
+        var conns = peer.connections[peerId];
+        for (var i = 0, ii = conns.length; i < ii; i += 1) {
+          var conn = conns[i];
+          fn(conn, $(this));
+        }
+      }
+
+      checkedIds[peerId] = 1;
     });
-    </script>
+  }
+
+});
+
+// Make sure things clean up properly.
+
+window.onunload = window.onbeforeunload = function(e) {
+  if (!!peer && !peer.destroyed) {
+    peer.destroy();
+  }
+};
+
+</script>
 	</body>
 </html>
