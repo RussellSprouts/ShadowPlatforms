@@ -76,8 +76,8 @@ $(document).ready(function() {
         metadata: {message: 'hi i want to chat with you!'}
       });
       c.on('open', function() {
-        CONNECTION = c;
         connect(c);
+        CONNECTION = c;
       });
       c.on('error', function(err) { alert(err); });
     }
