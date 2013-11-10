@@ -1,14 +1,14 @@
 "use strict";
 var canvas = document.getElementById('c');
 var ctx = canvas.getContext('2d');
-ctx.fillStyle='black';
-ctx.strokeStyle='blue';
+ctx.fillStyle='white';
+ctx.strokeStyle='green';
 ctx.lineWidth = 2;
 var width = canvas.width;
 var height = canvas.height;
 var gravity = 10;
-var ballCount = 10;
-var ITERATION_COUNT = 3;
+var ballCount = 0;
+var ITERATION_COUNT = 10;
 var player;
 
 
@@ -94,22 +94,7 @@ function integrateVerlet(b, t, dt){
 
 function satisfyConstraints(dynamicObjects, t){
   for( var iterations = 0; iterations < ITERATION_COUNT; iterations++ ){
-    for( var i = 0; i<dynamicObjects.length; i++ ){
-      var b = dynamicObjects[i];
-      if( b.y > height - b.height ){
-        var normal = b.y - height + b.height; 
-        b.frictionY = normal;
-		b.onGround = JUMP_GRACE_PERIOD;
-      }
-      b.x = Math.max(b.width, Math.min(b.x, width-b.width));
-      b.y = Math.max(b.height, Math.min(b.y, height-b.height));
-    }
     for( var a = 0; a<dynamicObjects.length; a++ ){
-      for( var b = 0; b<dynamicObjects.length; b++ ){
-        if( a!= b ){
-        
-        }
-      }
       for( var b = 0; b<staticObjects.length; b++ ){
         var doA = dynamicObjects[a];
         var soB = staticObjects[b];
@@ -117,6 +102,10 @@ function satisfyConstraints(dynamicObjects, t){
         if( coords ){
           doA.x = coords[0];
           doA.y = coords[1];
+		  if( !aIsPressed && !dIsPressed ){
+			  doA.ox = doA.x;
+			  doA.oy = doA.y;
+		  }
         }
       }
     }
@@ -159,81 +148,6 @@ function Ball(){
 
 var dynamicObjects = [];
 var staticObjects = [];
-for( var i = 0; i<ballCount; i++ ){
-  dynamicObjects[i] = new Ball();
-}
-
-function drawTile(){
-  ctx.fillRect(this.x, this.y, this.width, this.height);
-}
-
-function collideTop(doA){
-  
-}
-
-
-function collideSolidTile(doA){
-  if( (doA.x <= this.x + this.width && doA.x + doA.width >= this.x) && (doA.y <= this.y + this.height && doA.y + doA.height >= this.y) ){
-    var dcx = (doA.x + doA.width/2) - (this.x + this.width/2);
-    var dcy = (doA.y + doA.height/2) - (this.y + this.height/2);
-    var dx = 0;
-    var dy = 0;
-    if( dcx > 0 ){
-      dx = this.x + this.width - doA.x;
-    } else {
-      dx = this.x - doA.width - doA.x;
-    }
-    if( dcy > 0 ){
-      dy = this.y + this.height - doA.y;
-    } else {
-      dy = this.y - doA.height - doA.y;
-    }
-    if( Math.abs(dy) < Math.abs(dx) && Math.abs(dx) > 1 ){
-      return [doA.x, doA.y + dy];
-    } else if( Math.abs(dy) > 1 ){
-      return [doA.x + dx, doA.y];
-    }
-  } else {
-    return false;
-  }
-}
-
-
-function SolidTile(x, y){
-  this.draw = drawTile;
-  this.collide = collideSolidTile;
-  this.width = 20;
-  this.height = 20;
-  this.x = x;
-  this.y = y;
-}
-
-function collideSlopedTile(doA){
-  //collides with center of the player.
-  if( (doA.x < this.x + this.width && doA.x + doA.width > this.x) && (doA.y < this.y + this.height && doA.y + doA.height > this.y) ){
-    var dcx = (doA.x + doA.width/2) - (this.x + this.width/2);
-    var dcy = (doA.y + doA.height/2) - (this.y + this.height/2);
-    var dx = 0;
-    var dy = 0;
-    if( dcx > 0 ){
-      dx = this.x + this.width - doA.x;
-    } else {
-      dx = this.x - doA.width - doA.x;
-    }
-    if( dcy > 0 ){
-      dy = this.y + this.height - doA.y;
-    } else {
-      dy = this.y - doA.height - doA.y;
-    }
-    if( Math.abs(dy) < Math.abs(dx) ){
-      return [doA.x, doA.y + dy];
-    } else {
-      return [doA.x + dx, doA.y];
-    }
-  } else {
-    return false;
-  }
-}
 
 function Line(startX, startY, endX, endY){
   this.ax = startX
@@ -267,27 +181,42 @@ function collideLine(dyn){
   isInBoundingBoxY = (dyn.y >= lowery && dyn.y <= highery) || (lowery >= dyn.y && lowery <= dyn.y+dyn.height) || (highery >= dyn.y && highery <= dyn.y+dyn.height);
   
   if( isInBoundingBoxX && isInBoundingBoxY ){
-	  if( crossProduct(ax,ay,bx,by,oldTLx,oldTLy) >= -.1 && crossProduct(ax,ay,bx,by,oldTRx,oldTRy) >= -.1 &&
-		  crossProduct(ax,ay,bx,by,oldBLx,oldBLy) >= -.1 && crossProduct(ax,ay,bx,by,oldBRx,oldBRy) >= -.1 &&
-		  (crossProduct(ax,ay,bx,by,newTLx,newTLy) <= .1 || crossProduct(ax,ay,bx,by,newTRx,newTRy) <= .1 ||
-		   crossProduct(ax,ay,bx,by,newBLx,newBLy) <= .1 || crossProduct(ax,ay,bx,by,newBRx,newBRy) <= .1) ){
+	  if( crossProduct(ax,ay,bx,by,oldTLx,oldTLy) >= -1 && crossProduct(ax,ay,bx,by,oldTRx,oldTRy) >= -1 &&
+		  crossProduct(ax,ay,bx,by,oldBLx,oldBLy) >= -1 && crossProduct(ax,ay,bx,by,oldBRx,oldBRy) >= -1 &&
+		 (crossProduct(ax,ay,bx,by,newTLx,newTLy) <= 1 || crossProduct(ax,ay,bx,by,newTRx,newTRy) <= 1 ||
+		  crossProduct(ax,ay,bx,by,newBLx,newBLy) <= 1 || crossProduct(ax,ay,bx,by,newBRx,newBRy) <= 1) ){
 		if( (ax < bx && ay > by) || (ay == by && ax < bx) ){
+			ctx.fillStyle='green';
 			return vectorProjection(ax,ay,bx,by,newTLx,newTLy);
 		} else if( ax < bx && ay < by ){
 			var coord = vectorProjection(ax,ay,bx,by,newTRx,newTRy);
+			ctx.fillStyle='yellow';
+			dyn.onGround = 0;
 			coord[0] -= dyn.width;
 			return coord;
-		} else if( (ax > bx && ay < by) || (ax == bx && ay < by) ){
+		} else if( (ax > bx && ay < by)  ){
 			var coord = vectorProjection(ax,ay,bx,by,newBRx,newBRy);
 			coord[0] -= dyn.width;
 			coord[1] -= dyn.height;
-			dyn.onGround = JUMP_GRACE_PERIOD;
+			ctx.fillStyle='blue';
 			return coord;
-		} else if( (ax >= bx && ay >= by) ){
+		} else if( (ax == bx && ay < by) ){
+			var coord = vectorProjection(ax,ay,bx,by,newBRx,newBRy);
+			coord[0] -= dyn.width;
+			coord[1] -= dyn.height;
+			ctx.fillStyle='#00ffff';
+			return coord;
+		} else if( (ax > bx && ay >= by) ){
 			var coord = vectorProjection(ax,ay,bx,by,newBLx,newBLy);
 			coord[1] -= dyn.height;
 			ctx.fillStyle='red';
+			
 			dyn.onGround = JUMP_GRACE_PERIOD;
+			return coord;
+		} else if( ax == bx && ay>= by ) {
+			var coord = vectorProjection(ax,ay,bx,by,newBLx,newBLy);
+			coord[1] -= dyn.height;
+			ctx.fillStyle='brown';
 			return coord;
 		}
 	  } 
@@ -304,56 +233,6 @@ function vectorProjection(ax,ay,bx,by,px,py){
   py = py - ay;
   return [((px*((bx - ax)*(bx - ax))) / magAB) + ((py*((by - ay)*(bx - ax))) / magAB) + ax,
           ((py*((bx - ax)*(by - ay))) / magAB) + ((py*((by - ay)*(by - ay))) / magAB) + ay];
-}
-
-function drawSlopedTile(){
-  ctx.beginPath();
-  ctx.moveTo(this.x, this.y+this.height); 
-  ctx.lineTo(this.x, this.y + this.height - this.startY);
-  ctx.lineTo(this.x+this.width, this.y + this.height - this.endY);
-  ctx.lineTo(this.x+this.width, this.y + this.height);
-  ctx.closePath();
-  ctx.fill();
-}
-
-
-function SlopedTile(x,y, startY, endY){
-  this.draw = drawSlopedTile;
-  this.collide = collideSolidTile;
-  this.width = 20;
-  this.startY = startY;
-  this.endY = endY;
-  this.height = 20;
-  this.x = x;
-  this.y = y;
-}
-
-function collideBottomlessTile(doA){
-  if( this.y >= doA.oy + doA.height && (doA.y + doA.height >= this.y) && (doA.x < this.x + this.width && doA.x + doA.width > this.x) ){
-    var dcx = (doA.x + doA.width/2) - (this.x + this.width/2);
-    var dcy = (doA.y + doA.height/2) - (this.y + this.height/2);
-    //doA.oy = this.y + this.height - 10
-      //if( dcy > 0 ){
-        //return [doA.x, this.y + this.height];
-      //} else {
-        return [doA.x, this.y - doA.height];
-      //}
-  } else {
-    return false;
-  }
-}
-
-function drawBottomlessTile(){
-  ctx.fillRect(this.x, this.y, this.width, this.height/4);
-}
-
-function BottomlessTile(x,y){
-  this.draw = drawBottomlessTile;
-  this.collide = collideBottomlessTile;
-  this.width = 20;
-  this.height = 20;
-  this.x = x;
-  this.y = y;
 }
 
 function drawPlayer(){
@@ -375,26 +254,14 @@ player = dynamicObjects[0];
 staticObjects[0] = new Line(200,200,100,200);
 staticObjects[1] = new Line(400,400,300,300);
 staticObjects[2] = new Line(300,300,200,300);
+staticObjects[7] = new Line(100,100,200,200);
+staticObjects[8] = new Line(500,400,400,400);
 
+staticObjects[3] = new Line(10,10,600,10);
+staticObjects[4] = new Line(600,600,10,600);
+staticObjects[5] = new Line(600,10,600,600);
+staticObjects[6] = new Line(10,600,10,10);
 
-canvas.onmousemove = function(e){
-  //console.log(e);
-  mouseX = e.x;
-  mouseY = e.y;
-  if( e.which != 0 ){
-    mouseD = true;
-    
-    var b = new Ball();
-    b.x = e.x;
-    b.y = e.y;
-    b.ox = e.x;
-    b.oy = e.y;
-    dynamicObjects[dynamicObjects.length] = b;
-    //*/
-  } else {
-    mouseD = false;
-  }
-}
 
 canvas.mouseDown = function(){
   mouseD = true;
@@ -405,7 +272,7 @@ canvas.mouseUp = function(){
 
 var oldT = 0;
 function callback(t){
-  ctx.fillStyle='black';
+  ctx.fillStyle='purple';
   var dt = 16;
   if( wIsPressed ){
     //dynamicObjects[0].oy += .1;
@@ -415,7 +282,7 @@ function callback(t){
     integrateVerlet(dynamicObjects[i], t, dt/100);
     satisfyConstraints(dynamicObjects, t);
   }
-  ctx.clearRect(0,0,width,height);
+  //ctx.clearRect(0,0,width,height);
   for( var i = 0; i<dynamicObjects.length; i++ ){
     dynamicObjects[i].draw();
   }
